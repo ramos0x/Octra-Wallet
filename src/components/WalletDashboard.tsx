@@ -184,8 +184,19 @@ export function WalletDashboard({
   };
 
   const handleImportSuccess = (newWallet: Wallet) => {
+    // Ensure the wallet is properly saved before adding
     onAddWallet(newWallet);
     setShowAddWalletDialog(false);
+    
+    // Force save to localStorage immediately
+    const currentWallets = JSON.parse(localStorage.getItem('wallets') || '[]');
+    const walletExists = currentWallets.some((w: Wallet) => w.address === newWallet.address);
+    if (!walletExists) {
+      const updatedWallets = [...currentWallets, newWallet];
+      localStorage.setItem('wallets', JSON.stringify(updatedWallets));
+      localStorage.setItem('activeWalletId', newWallet.address);
+    }
+    
     toast({
       title: "Wallet Added",
       description: "New wallet has been added successfully",
@@ -193,8 +204,19 @@ export function WalletDashboard({
   };
 
   const handleGenerateSuccess = (newWallet: Wallet) => {
+    // Ensure the wallet is properly saved before adding
     onAddWallet(newWallet);
     setShowAddWalletDialog(false);
+    
+    // Force save to localStorage immediately
+    const currentWallets = JSON.parse(localStorage.getItem('wallets') || '[]');
+    const walletExists = currentWallets.some((w: Wallet) => w.address === newWallet.address);
+    if (!walletExists) {
+      const updatedWallets = [...currentWallets, newWallet];
+      localStorage.setItem('wallets', JSON.stringify(updatedWallets));
+      localStorage.setItem('activeWalletId', newWallet.address);
+    }
+    
     toast({
       title: "Wallet Generated",
       description: "New wallet has been generated and added successfully",

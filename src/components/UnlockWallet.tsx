@@ -56,11 +56,27 @@ export function UnlockWallet({ onUnlock }: UnlockWalletProps) {
 
       for (const encryptedWallet of encryptedWallets) {
         try {
-          const decryptedData = await decryptWalletData(encryptedWallet.encryptedData, password);
-          const wallet = JSON.parse(decryptedData);
+          let wallet;
+          try {
+            const decryptedData = await decryptWalletData(encryptedWallet.encryptedData, password);
+            wallet = JSON.parse(decryptedData);
+          } catch (decryptError) {
+            // If decryption fails, try to parse as plain JSON (temporary wallets)
+            console.warn('Decryption failed, trying plain JSON:', encryptedWallet.address);
+            wallet = JSON.parse(encryptedWallet.encryptedData);
+          }
           decryptedWallets.push(wallet);
         } catch (error) {
           console.error('Failed to decrypt wallet:', encryptedWallet.address, error);
+        }
+      }
+      
+      // Also check regular localStorage for any wallets that might not be encrypted yet
+      const regularWallets = JSON.parse(localStorage.getItem('wallets') || '[]');
+      for (const regularWallet of regularWallets) {
+        const alreadyExists = decryptedWallets.some(w => w.address === regularWallet.address);
+        if (!alreadyExists) {
+          decryptedWallets.push(regularWallet);
         }
       }
 

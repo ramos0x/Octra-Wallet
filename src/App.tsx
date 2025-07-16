@@ -200,8 +200,30 @@ function App() {
     const updatedWallets = [...wallets, newWallet];
     setWallets(updatedWallets);
     setWallet(newWallet);
+    
+    // Save to both regular storage and encrypted storage
     localStorage.setItem('wallets', JSON.stringify(updatedWallets));
     localStorage.setItem('activeWalletId', newWallet.address);
+    
+    // Also save to encrypted storage if password protection is enabled
+    const hasPassword = localStorage.getItem('walletPasswordHash');
+    if (hasPassword) {
+      // Update encrypted wallets storage
+      const existingEncryptedWallets = JSON.parse(localStorage.getItem('encryptedWallets') || '[]');
+      const walletExists = existingEncryptedWallets.some((w: any) => w.address === newWallet.address);
+      
+      if (!walletExists) {
+        // For now, we'll add a placeholder - the actual encryption should happen during password setup
+        // This is a temporary solution to prevent wallet loss
+        const newEncryptedWallet = {
+          address: newWallet.address,
+          encryptedData: JSON.stringify(newWallet), // Temporary - should be properly encrypted
+          createdAt: Date.now()
+        };
+        const updatedEncryptedWallets = [...existingEncryptedWallets, newEncryptedWallet];
+        localStorage.setItem('encryptedWallets', JSON.stringify(updatedEncryptedWallets));
+      }
+    }
   };
 
   const switchWallet = (selectedWallet: Wallet) => {
