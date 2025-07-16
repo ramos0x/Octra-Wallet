@@ -11,7 +11,7 @@ import {
   Wallet as WalletIcon, 
   Send, 
   History, 
-  LogOut,
+  Lock,
   Copy,
   PieChart,
   Shield,
@@ -145,21 +145,12 @@ export function WalletDashboard({
   };
 
   const handleDisconnect = () => {
-    if (window.confirm('Are you sure you want to disconnect all wallets? Make sure you have backed up your private keys or mnemonic phrases.')) {
-      // Clear localStorage first
-      localStorage.removeItem('wallets');
-      localStorage.removeItem('activeWalletId');
+    if (window.confirm('Are you sure you want to lock your wallet? You will need to enter your password to unlock it again.')) {
+      // Lock wallet by setting lock state
       localStorage.setItem('isWalletLocked', 'true');
       
       // Trigger storage events for cross-tab synchronization
       setTimeout(() => {
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: 'wallets',
-          oldValue: JSON.stringify(wallets),
-          newValue: null,
-          storageArea: localStorage
-        }));
-        
         window.dispatchEvent(new StorageEvent('storage', {
           key: 'isWalletLocked',
           oldValue: 'false',
@@ -444,10 +435,10 @@ export function WalletDashboard({
                 variant="outline"
                 size="sm"
                 onClick={handleDisconnect}
-                className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 flex items-center gap-2"
+                className="text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 flex items-center gap-2"
               >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden md:inline">Disconnect All</span>
+                <Lock className="h-4 w-4" />
+                <span className="hidden md:inline">Lock Wallet</span>
               </Button>
             </div>
           </div>
