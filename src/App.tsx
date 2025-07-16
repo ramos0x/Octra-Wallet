@@ -228,21 +228,9 @@ function App() {
   };
 
   const disconnectWallet = () => {
+    // Only clear UI state, don't remove wallet data from localStorage
     setWallet(null);
     setWallets([]);
-    localStorage.removeItem('wallets');
-    localStorage.removeItem('activeWalletId');
-    
-    // Reset theme to light when disconnecting
-    localStorage.setItem('octra-wallet-theme', 'dark');
-    // Force theme reset by dispatching storage event
-    window.dispatchEvent(new StorageEvent('storage', {
-      key: 'octra-wallet-theme',
-      newValue: 'dark'
-    }));
-    
-    // Lock wallet
-    localStorage.setItem('isWalletLocked', 'true');
     setIsLocked(true);
   };
 

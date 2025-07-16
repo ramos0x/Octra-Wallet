@@ -158,6 +158,9 @@ export function WalletDashboard({
           storageArea: localStorage
         }));
       }, 50);
+      
+      // Call the parent's disconnect handler to update UI state
+      onDisconnect();
     }
   };
 
