@@ -68,13 +68,29 @@ export function UnlockWallet({ onUnlock }: UnlockWalletProps) {
       localStorage.setItem('isWalletLocked', 'false');
       localStorage.setItem('wallets', JSON.stringify(decryptedWallets));
       
-      // Trigger storage event for cross-tab synchronization
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: 'isWalletLocked',
-        oldValue: 'true',
-        newValue: 'false',
-        storageArea: localStorage
-      }));
+      // Set active wallet if not already set
+      const activeWalletId = localStorage.getItem('activeWalletId');
+      if (!activeWalletId && decryptedWallets.length > 0) {
+        localStorage.setItem('activeWalletId', decryptedWallets[0].address);
+      }
+      
+      // Trigger storage events for cross-tab synchronization
+      // Use setTimeout to ensure localStorage is fully updated before dispatching events
+      setTimeout(() => {
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'wallets',
+          oldValue: null,
+          newValue: JSON.stringify(decryptedWallets),
+          storageArea: localStorage
+        }));
+        
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'isWalletLocked',
+          oldValue: 'true',
+          newValue: 'false',
+          storageArea: localStorage
+        }));
+      }, 50);
       
       toast({
         title: "Wallet Unlocked!",

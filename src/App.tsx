@@ -27,39 +27,48 @@ function App() {
           setWallet(null);
           setWallets([]);
         } else {
-          // If wallet is unlocked, reload wallet data
-          const storedWallets = localStorage.getItem('wallets');
-          const activeWalletId = localStorage.getItem('activeWalletId');
-          
-          if (storedWallets) {
-            const parsedWallets = JSON.parse(storedWallets);
-            setWallets(parsedWallets);
+          // If wallet is unlocked, reload wallet data with a small delay
+          // to ensure localStorage is fully updated
+          setTimeout(() => {
+            const storedWallets = localStorage.getItem('wallets');
+            const activeWalletId = localStorage.getItem('activeWalletId');
             
-            if (parsedWallets.length > 0) {
-              let activeWallet = parsedWallets[0];
-              if (activeWalletId) {
-                const foundWallet = parsedWallets.find((w: Wallet) => w.address === activeWalletId);
-                if (foundWallet) {
-                  activeWallet = foundWallet;
+            if (storedWallets) {
+              const parsedWallets = JSON.parse(storedWallets);
+              setWallets(parsedWallets);
+              
+              if (parsedWallets.length > 0) {
+                let activeWallet = parsedWallets[0];
+                if (activeWalletId) {
+                  const foundWallet = parsedWallets.find((w: Wallet) => w.address === activeWalletId);
+                  if (foundWallet) {
+                    activeWallet = foundWallet;
+                  }
                 }
+                setWallet(activeWallet);
               }
-              setWallet(activeWallet);
             }
-          }
+          }, 100);
         }
       }
       
       // Handle wallet data changes
       if (e.key === 'wallets' && !isLocked) {
-        const newWallets = e.newValue ? JSON.parse(e.newValue) : [];
-        setWallets(newWallets);
-        
-        // Update active wallet if needed
-        const activeWalletId = localStorage.getItem('activeWalletId');
-        if (activeWalletId && newWallets.length > 0) {
-          const foundWallet = newWallets.find((w: Wallet) => w.address === activeWalletId);
-          if (foundWallet) {
-            setWallet(foundWallet);
+        // Only update if we don't have wallets or if the data actually changed
+        if (e.newValue) {
+          const newWallets = JSON.parse(e.newValue);
+          setWallets(newWallets);
+          
+          // Update active wallet if needed
+          const activeWalletId = localStorage.getItem('activeWalletId');
+          if (activeWalletId && newWallets.length > 0) {
+            const foundWallet = newWallets.find((w: Wallet) => w.address === activeWalletId);
+            if (foundWallet) {
+              setWallet(foundWallet);
+            }
+          } else if (newWallets.length > 0 && !wallet) {
+            // If no active wallet is set but we have wallets, set the first one
+            setWallet(newWallets[0]);
           }
         }
       }
@@ -67,8 +76,9 @@ function App() {
       // Handle active wallet changes
       if (e.key === 'activeWalletId' && !isLocked) {
         const newActiveWalletId = e.newValue;
-        if (newActiveWalletId && wallets.length > 0) {
-          const foundWallet = wallets.find(w => w.address === newActiveWalletId);
+        const currentWallets = wallets.length > 0 ? wallets : JSON.parse(localStorage.getItem('wallets') || '[]');
+        if (newActiveWalletId && currentWallets.length > 0) {
+          const foundWallet = currentWallets.find((w: Wallet) => w.address === newActiveWalletId);
           if (foundWallet) {
             setWallet(foundWallet);
           }
@@ -81,7 +91,7 @@ function App() {
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  }, [isLocked, wallets]);
+  }, [isLocked, wallets, wallet]);
 
   useEffect(() => {
     // Check for dApp connection request in URL

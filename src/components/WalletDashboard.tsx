@@ -146,6 +146,28 @@ export function WalletDashboard({
 
   const handleDisconnect = () => {
     if (window.confirm('Are you sure you want to disconnect all wallets? Make sure you have backed up your private keys or mnemonic phrases.')) {
+      // Clear localStorage first
+      localStorage.removeItem('wallets');
+      localStorage.removeItem('activeWalletId');
+      localStorage.setItem('isWalletLocked', 'true');
+      
+      // Trigger storage events for cross-tab synchronization
+      setTimeout(() => {
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'wallets',
+          oldValue: JSON.stringify(wallets),
+          newValue: null,
+          storageArea: localStorage
+        }));
+        
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'isWalletLocked',
+          oldValue: 'false',
+          newValue: 'true',
+          storageArea: localStorage
+        }));
+      }, 50);
+      
       onDisconnect();
     }
   };
