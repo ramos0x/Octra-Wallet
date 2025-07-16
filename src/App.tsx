@@ -14,6 +14,75 @@ function App() {
   const [connectionRequest, setConnectionRequest] = useState<DAppConnectionRequest | null>(null);
   const [selectedWalletForConnection, setSelectedWalletForConnection] = useState<Wallet | null>(null);
 
+  // Listen for storage changes across tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      // Handle wallet lock state changes
+      if (e.key === 'isWalletLocked') {
+        const isLocked = e.newValue === 'true';
+        setIsLocked(isLocked);
+        
+        if (isLocked) {
+          // If wallet is locked, clear current wallet data
+          setWallet(null);
+          setWallets([]);
+        } else {
+          // If wallet is unlocked, reload wallet data
+          const storedWallets = localStorage.getItem('wallets');
+          const activeWalletId = localStorage.getItem('activeWalletId');
+          
+          if (storedWallets) {
+            const parsedWallets = JSON.parse(storedWallets);
+            setWallets(parsedWallets);
+            
+            if (parsedWallets.length > 0) {
+              let activeWallet = parsedWallets[0];
+              if (activeWalletId) {
+                const foundWallet = parsedWallets.find((w: Wallet) => w.address === activeWalletId);
+                if (foundWallet) {
+                  activeWallet = foundWallet;
+                }
+              }
+              setWallet(activeWallet);
+            }
+          }
+        }
+      }
+      
+      // Handle wallet data changes
+      if (e.key === 'wallets' && !isLocked) {
+        const newWallets = e.newValue ? JSON.parse(e.newValue) : [];
+        setWallets(newWallets);
+        
+        // Update active wallet if needed
+        const activeWalletId = localStorage.getItem('activeWalletId');
+        if (activeWalletId && newWallets.length > 0) {
+          const foundWallet = newWallets.find((w: Wallet) => w.address === activeWalletId);
+          if (foundWallet) {
+            setWallet(foundWallet);
+          }
+        }
+      }
+      
+      // Handle active wallet changes
+      if (e.key === 'activeWalletId' && !isLocked) {
+        const newActiveWalletId = e.newValue;
+        if (newActiveWalletId && wallets.length > 0) {
+          const foundWallet = wallets.find(w => w.address === newActiveWalletId);
+          if (foundWallet) {
+            setWallet(foundWallet);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [isLocked, wallets]);
+
   useEffect(() => {
     // Check for dApp connection request in URL
     const urlParams = new URLSearchParams(window.location.search);
