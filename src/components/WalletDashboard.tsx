@@ -158,8 +158,6 @@ export function WalletDashboard({
           storageArea: localStorage
         }));
       }, 50);
-      
-      onDisconnect();
     }
   };
 
