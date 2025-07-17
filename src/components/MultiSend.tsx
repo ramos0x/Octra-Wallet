@@ -279,6 +279,7 @@ export function MultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonceUpda
   }
 
   const validRecipients = recipients.filter(r => r.address && Number(r.amount || 0) > 0);
+  const totalAmount = getTotalAmount();
   const totalFees = getTotalFees();
   const totalCost = totalAmount + totalFees;
   const currentBalance = balance || 0;
