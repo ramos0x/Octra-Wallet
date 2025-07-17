@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { ExternalLink, Shield, Eye, Send, X, Check } from 'lucide-react';
 import { Wallet, DAppConnectionRequest } from '../types/wallet';
 import { useToast } from '@/hooks/use-toast';
@@ -120,33 +121,35 @@ export function DAppConnection({
             {/* Wallet Selection */}
             <div className="space-y-3">
               <h3 className="font-medium">Select Account</h3>
-              <div className="space-y-2">
-                {wallets.map((wallet, index) => (
-                  <div
-                    key={wallet.address}
-                    className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                      selectedWallet?.address === wallet.address
-                        ? 'border-primary bg-primary/5'
-                        : 'hover:bg-muted/50'
-                    }`}
-                    onClick={() => onWalletSelect(wallet)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-medium">
-                          Account {index + 1}
+              <ScrollArea className="max-h-[200px] w-full">
+                <div className="space-y-2 pr-4">
+                  {wallets.map((wallet, index) => (
+                    <div
+                      key={wallet.address}
+                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                        selectedWallet?.address === wallet.address
+                          ? 'border-primary bg-primary/5'
+                          : 'hover:bg-muted/50'
+                      }`}
+                      onClick={() => onWalletSelect(wallet)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium">
+                            Account {index + 1}
+                          </div>
+                          <div className="text-sm text-muted-foreground font-mono">
+                            {truncateAddress(wallet.address)}
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground font-mono">
-                          {truncateAddress(wallet.address)}
-                        </div>
+                        {selectedWallet?.address === wallet.address && (
+                          <Check className="h-5 w-5 text-primary" />
+                        )}
                       </div>
-                      {selectedWallet?.address === wallet.address && (
-                        <Check className="h-5 w-5 text-primary" />
-                      )}
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </div>
 
             <Separator />

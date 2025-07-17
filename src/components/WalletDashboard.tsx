@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -77,6 +78,8 @@ export function WalletDashboard({
   const [showAddWalletDialog, setShowAddWalletDialog] = useState(false);
   const [showRPCManager, setShowRPCManager] = useState(false);
   const [addWalletTab, setAddWalletTab] = useState('import');
+  const [walletToDelete, setWalletToDelete] = useState<Wallet | null>(null);
+  const [showLockConfirm, setShowLockConfirm] = useState(false);
   const { toast } = useToast();
 
   // Initial data fetch when wallet is connected
@@ -145,51 +148,53 @@ export function WalletDashboard({
   };
 
   const handleDisconnect = () => {
-    if (window.confirm('Are you sure you want to lock your wallet? You will need to enter your password to unlock it again.')) {
-      // Lock wallet by setting lock state
-      localStorage.setItem('isWalletLocked', 'true');
-      
-      // Trigger storage events for cross-tab synchronization
-      setTimeout(() => {
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: 'isWalletLocked',
-          oldValue: 'false',
-          newValue: 'true',
-          storageArea: localStorage
-        }));
-      }, 50);
-      
-      // Call the parent's disconnect handler to update UI state
-      onDisconnect();
-    }
+    // Lock wallet by setting lock state
+    localStorage.setItem('isWalletLocked', 'true');
+    
+    // Trigger storage events for cross-tab synchronization
+    setTimeout(() => {
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'isWalletLocked',
+        oldValue: 'false',
+        newValue: 'true',
+        storageArea: localStorage
+      }));
+    }, 50);
+    
+    // Call the parent's disconnect handler to update UI state
+    onDisconnect();
+    setShowLockConfirm(false);
   };
 
-  const handleRemoveWallet = (walletToRemove: Wallet) => {
+  const handleRemoveWallet = () => {
+    if (!walletToDelete) return;
+    
     if (wallets.length === 1) {
       toast({
         title: "Cannot Remove",
         description: "You cannot remove the last wallet. Use disconnect instead.",
         variant: "destructive",
       });
+      setWalletToDelete(null);
       return;
     }
     
-    if (window.confirm(`Are you sure you want to remove wallet ${truncateAddress(walletToRemove.address)}?`)) {
-      // Remove from regular wallets storage
-      onRemoveWallet(walletToRemove);
-      
-      // Also remove from encrypted wallets storage
-      const encryptedWallets = JSON.parse(localStorage.getItem('encryptedWallets') || '[]');
-      const updatedEncryptedWallets = encryptedWallets.filter(
-        (w: any) => w.address !== walletToRemove.address
-      );
-      localStorage.setItem('encryptedWallets', JSON.stringify(updatedEncryptedWallets));
-      
-      toast({
-        title: "Wallet Removed",
-        description: "Wallet has been removed successfully",
-      });
-    }
+    // Remove from regular wallets storage
+    onRemoveWallet(walletToDelete);
+    
+    // Also remove from encrypted wallets storage
+    const encryptedWallets = JSON.parse(localStorage.getItem('encryptedWallets') || '[]');
+    const updatedEncryptedWallets = encryptedWallets.filter(
+      (w: any) => w.address !== walletToDelete.address
+    );
+    localStorage.setItem('encryptedWallets', JSON.stringify(updatedEncryptedWallets));
+    
+    toast({
+      title: "Wallet Removed",
+      description: "Wallet has been removed successfully",
+    });
+    
+    setWalletToDelete(null);
   };
 
   const handleImportSuccess = (newWallet: Wallet) => {
@@ -352,18 +357,36 @@ export function WalletDashboard({
                                   <Copy className="h-3 w-3" />
                                 </Button>
                                 {wallets.length > 1 && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleRemoveWallet(w);
-                                    }}
-                                    className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                                    title="Remove wallet"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setWalletToDelete(w);
+                                        }}
+                                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                        title="Remove wallet"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Remove Wallet</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Are you sure you want to remove wallet <span className="font-mono">{truncateAddress(w.address)}</span>? This action cannot be undone.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel onClick={() => setWalletToDelete(null)}>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleRemoveWallet} className="bg-red-600 hover:bg-red-700">
+                                          Remove
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
                                 )}
                               </div>
                             </div>
@@ -463,15 +486,32 @@ export function WalletDashboard({
                   <RPCProviderManager onClose={() => setShowRPCManager(false)} />
                 </DialogContent>
               </Dialog>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDisconnect}
-                className="text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 flex items-center gap-2"
-              >
-                <Lock className="h-4 w-4" />
-                <span className="hidden md:inline">Lock Wallet</span>
-              </Button>
+              <AlertDialog open={showLockConfirm} onOpenChange={setShowLockConfirm}>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 flex items-center gap-2"
+                  >
+                    <Lock className="h-4 w-4" />
+                    <span className="hidden md:inline">Lock Wallet</span>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Lock Wallet</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to lock your wallet? You will need to enter your password to unlock it again.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDisconnect} className="bg-orange-600 hover:bg-orange-700">
+                      Lock Wallet
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         </div>
