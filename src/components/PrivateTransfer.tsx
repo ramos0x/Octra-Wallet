@@ -9,8 +9,6 @@ import { Separator } from '@/components/ui/separator';
 import { Shield, AlertTriangle, Wallet as WalletIcon, CheckCircle, ExternalLink, Copy, Loader2 } from 'lucide-react';
 import { Wallet } from '../types/wallet';
 import { fetchEncryptedBalance, createPrivateTransfer, getAddressInfo } from '../utils/api';
-import { resolveAddressOrDomain } from '../utils/domainApi';
-import { AddressInput } from './AddressInput';
 import { useToast } from '@/hooks/use-toast';
 
 interface PrivateTransferProps {
@@ -20,7 +18,6 @@ interface PrivateTransferProps {
 
 export function PrivateTransfer({ wallet, onTransactionSuccess }: PrivateTransferProps) {
   const [recipientAddress, setRecipientAddress] = useState('');
-  const [resolvedRecipientAddress, setResolvedRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isCheckingRecipient, setIsCheckingRecipient] = useState(false);
@@ -39,7 +36,7 @@ export function PrivateTransfer({ wallet, onTransactionSuccess }: PrivateTransfe
   // Check recipient when address changes
   useEffect(() => {
     const checkRecipient = async () => {
-      const finalAddress = resolvedRecipientAddress || recipientAddress;
+      const finalAddress = recipientAddress;
       if (!finalAddress || finalAddress.length < 10) {
         setRecipientInfo(null);
         return;
@@ -68,7 +65,7 @@ export function PrivateTransfer({ wallet, onTransactionSuccess }: PrivateTransfe
 
     const timeoutId = setTimeout(checkRecipient, 500);
     return () => clearTimeout(timeoutId);
-  }, [recipientAddress, resolvedRecipientAddress, wallet?.address]);
+  }, [recipientAddress, wallet?.address]);
 
   const validateAddress = (address: string) => {
     const octAddressRegex = /^oct[1-9A-HJ-NP-Za-km-z]{44}$/;
@@ -106,7 +103,7 @@ export function PrivateTransfer({ wallet, onTransactionSuccess }: PrivateTransfe
       return;
     }
 
-    const finalRecipientAddress = resolvedRecipientAddress || recipientAddress;
+    const finalRecipientAddress = recipientAddress;
     
     if (!validateAddress(finalRecipientAddress)) {
       toast({
@@ -175,7 +172,6 @@ export function PrivateTransfer({ wallet, onTransactionSuccess }: PrivateTransfe
 
         // Reset form
         setRecipientAddress('');
-        setResolvedRecipientAddress('');
         setAmount('');
         setRecipientInfo(null);
 
@@ -271,11 +267,12 @@ export function PrivateTransfer({ wallet, onTransactionSuccess }: PrivateTransfe
         {/* Recipient Address */}
         <div className="space-y-2">
           <Label htmlFor="recipient">Recipient Address</Label>
-          <AddressInput
+          <Input
+            id="recipient"
+            placeholder="oct..."
             value={recipientAddress}
-            onChange={setRecipientAddress}
-            onResolvedAddress={setResolvedRecipientAddress}
-            placeholder="oct... or domain.oct"
+            onChange={(e) => setRecipientAddress(e.target.value)}
+            className="font-mono"
           />
           
           {/* Recipient Status */}
@@ -405,7 +402,7 @@ export function PrivateTransfer({ wallet, onTransactionSuccess }: PrivateTransfe
           onClick={handleSend}
           disabled={
             isSending || 
-            !validateAddress(resolvedRecipientAddress || recipientAddress) || 
+            !validateAddress(recipientAddress) || 
             !validateAmount(amount) || 
             !recipientInfo ||
             recipientInfo.error ||

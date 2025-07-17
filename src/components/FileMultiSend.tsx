@@ -12,12 +12,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Upload, FileText, AlertTriangle, Wallet as WalletIcon, CheckCircle, ExternalLink, Copy, Zap, Trash2 } from 'lucide-react';
 import { Wallet } from '../types/wallet';
 import { fetchBalance, sendTransaction, createTransaction } from '../utils/api';
-import { resolveAddressOrDomain } from '../utils/domainApi';
 import { useToast } from '@/hooks/use-toast';
 
 interface FileRecipient {
   address: string;
-  resolvedAddress: string;
   amount: string;
   isValid: boolean;
   error?: string;
@@ -44,7 +42,7 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
 
   const validateAddress = (address: string) => {
     const octAddressRegex = /^oct[1-9A-HJ-NP-Za-km-z]{44}$/;
-    return octAddressRegex.test(address) || address.endsWith('.oct');
+    return octAddressRegex.test(address);
   };
 
   const calculateFee = (amount: number) => {
@@ -120,7 +118,6 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
 
       parsedRecipients.push({
         address,
-        resolvedAddress: '',
         amount,
         isValid,
         error
@@ -130,30 +127,6 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
     return parsedRecipients;
   };
 
-  const resolveAddresses = async (recipients: FileRecipient[]): Promise<FileRecipient[]> => {
-    const resolvedRecipients = await Promise.all(
-      recipients.map(async (recipient) => {
-        if (!recipient.isValid) return recipient;
-
-        try {
-          const resolvedAddress = await resolveAddressOrDomain(recipient.address);
-          return {
-            ...recipient,
-            resolvedAddress,
-            isValid: true
-          };
-        } catch (error) {
-          return {
-            ...recipient,
-            isValid: false,
-            error: `Resolution failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-          };
-        }
-      })
-    );
-
-    return resolvedRecipients;
-  };
 
   const processFile = async (file: File) => {
     if (!file.name.endsWith('.txt')) {
@@ -188,12 +161,10 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
         return;
       }
 
-      // Resolve addresses
-      const resolvedRecipients = await resolveAddresses(parsedRecipients);
-      setRecipients(resolvedRecipients);
+      setRecipients(parsedRecipients);
 
-      const validCount = resolvedRecipients.filter(r => r.isValid).length;
-      const invalidCount = resolvedRecipients.length - validCount;
+      const validCount = parsedRecipients.filter(r => r.isValid).length;
+      const invalidCount = parsedRecipients.length - validCount;
 
       toast({
         title: "File Processed",
@@ -294,7 +265,7 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
         // Prepare all transactions in the batch
         for (let i = 0; i < batch.length; i++) {
           const recipient = batch[i];
-          const finalRecipientAddress = recipient.resolvedAddress || recipient.address;
+          const finalRecipientAddress = recipient.address;
           const txIndex = batchIdx * batchSize + i;
           const transactionNonce = currentNonce + 1 + txIndex;
 
@@ -470,7 +441,6 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
                 <div>• Example:</div>
                 <div className="font-mono bg-background p-2 rounded mt-1">
                   oct1234567890abcdef1234567890abcdef12345678<br/>
-                  domain1.oct<br/>
                   oct9876543210fedcba9876543210fedcba98765432
                 </div>
               </>
@@ -481,7 +451,6 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
                 <div>• Example:</div>
                 <div className="font-mono bg-background p-2 rounded mt-1">
                   oct1234567890abcdef1234567890abcdef12345678,1.5<br/>
-                  domain1.oct 2.0<br/>
                   oct9876543210fedcba9876543210fedcba98765432,0.5
                 </div>
               </>
@@ -561,11 +530,6 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
                           </div>
                           {recipient.error && (
                             <div className="text-xs text-red-600 mt-1">{recipient.error}</div>
-                          )}
-                          {recipient.resolvedAddress && recipient.resolvedAddress !== recipient.address && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Resolves to: {recipient.resolvedAddress}
-                            </div>
                           )}
                         </div>
                         <div className="text-right">

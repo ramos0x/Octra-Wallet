@@ -10,8 +10,6 @@ import { Badge } from '@/components/ui/badge';
 import { Send, AlertTriangle, Wallet as WalletIcon, CheckCircle, ExternalLink, Copy, MessageSquare, Calculator } from 'lucide-react';
 import { Wallet } from '../types/wallet';
 import { fetchBalance, sendTransaction, createTransaction } from '../utils/api';
-import { resolveAddressOrDomain } from '../utils/domainApi';
-import { AddressInput } from './AddressInput';
 import { useToast } from '@/hooks/use-toast';
 
 interface SendTransactionProps {
@@ -25,7 +23,6 @@ interface SendTransactionProps {
 
 export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNonceUpdate, onTransactionSuccess }: SendTransactionProps) {
   const [recipientAddress, setRecipientAddress] = useState('');
-  const [resolvedRecipientAddress, setResolvedRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -74,8 +71,7 @@ export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNon
       return;
     }
 
-    // Use resolved address if available, otherwise use input
-    const finalRecipientAddress = resolvedRecipientAddress || recipientAddress;
+    const finalRecipientAddress = recipientAddress;
     
     if (!validateAddress(finalRecipientAddress)) {
       toast({
@@ -244,11 +240,12 @@ export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNon
         {/* Recipient Address */}
         <div className="space-y-2">
           <Label htmlFor="recipient">Recipient Address</Label>
-          <AddressInput
+          <Input
+            id="recipient"
+            placeholder="oct..."
             value={recipientAddress}
-            onChange={setRecipientAddress}
-            onResolvedAddress={setResolvedRecipientAddress}
-            placeholder="oct... or domain.oct"
+            onChange={(e) => setRecipientAddress(e.target.value)}
+            className="font-mono"
           />
         </div>
 
@@ -377,7 +374,7 @@ export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNon
           onClick={handleSend}
           disabled={
             isSending || 
-            !validateAddress(resolvedRecipientAddress || recipientAddress) || 
+            !validateAddress(recipientAddress) || 
             !validateAmount(amount) || 
             totalCost > currentBalance ||
             Boolean(message && message.length > 1024)
