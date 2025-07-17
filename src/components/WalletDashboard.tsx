@@ -175,7 +175,16 @@ export function WalletDashboard({
     }
     
     if (window.confirm(`Are you sure you want to remove wallet ${truncateAddress(walletToRemove.address)}?`)) {
+      // Remove from regular wallets storage
       onRemoveWallet(walletToRemove);
+      
+      // Also remove from encrypted wallets storage
+      const encryptedWallets = JSON.parse(localStorage.getItem('encryptedWallets') || '[]');
+      const updatedEncryptedWallets = encryptedWallets.filter(
+        (w: any) => w.address !== walletToRemove.address
+      );
+      localStorage.setItem('encryptedWallets', JSON.stringify(updatedEncryptedWallets));
+      
       toast({
         title: "Wallet Removed",
         description: "Wallet has been removed successfully",

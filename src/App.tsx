@@ -236,6 +236,13 @@ function App() {
     setWallets(updatedWallets);
     localStorage.setItem('wallets', JSON.stringify(updatedWallets));
     
+    // Also remove from encrypted wallets storage
+    const encryptedWallets = JSON.parse(localStorage.getItem('encryptedWallets') || '[]');
+    const updatedEncryptedWallets = encryptedWallets.filter(
+      (w: any) => w.address !== walletToRemove.address
+    );
+    localStorage.setItem('encryptedWallets', JSON.stringify(updatedEncryptedWallets));
+    
     // If removing active wallet, switch to another or clear
     if (wallet?.address === walletToRemove.address) {
       if (updatedWallets.length > 0) {
