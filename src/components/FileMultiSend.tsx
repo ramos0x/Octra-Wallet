@@ -361,6 +361,11 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
   const clearRecipients = () => {
     setRecipients([]);
     setResults([]);
+    // Reset file input
+    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
   };
 
   if (!wallet) {
