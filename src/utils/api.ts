@@ -18,7 +18,7 @@ async function makeAPIRequest(endpoint: string, options: RequestInit = {}): Prom
   const isDevelopment = import.meta.env.DEV;
   
   // Merge headers from RPC provider configuration
-  const headers = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...provider.headers,
     ...options.headers

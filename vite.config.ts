@@ -43,31 +43,13 @@ export default defineConfig({
               try {
                 const url = new URL(rpcUrl);
                 
-                // Update the proxy target dynamically
-                const target = `${url.protocol}//${url.host}`;
-                
                 // Set the new target host
                 proxyReq.setHeader('host', url.host);
                 
                 // Log the dynamic routing
-                console.log(`Proxying request to: ${target}${req.url}`);
+                console.log(`Proxying request to: ${url.protocol}//${url.host}${req.url}`);
               } catch (error) {
                 console.warn('Invalid RPC URL in header:', rpcUrl);
-              }
-            }
-          });
-          
-          // Handle dynamic target change
-          proxy.on('proxyReq', (proxyReq, req, res) => {
-            const rpcUrl = req.headers['x-rpc-url'];
-            if (rpcUrl && typeof rpcUrl === 'string') {
-              try {
-                const url = new URL(rpcUrl);
-                // Change the target for this specific request
-                proxy.changeOrigin = true;
-                proxy.target = `${url.protocol}//${url.host}`;
-              } catch (error) {
-                console.warn('Failed to change proxy target:', error);
               }
             }
           });
