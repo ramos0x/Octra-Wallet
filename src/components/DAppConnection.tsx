@@ -121,23 +121,21 @@ export function DAppConnection({
             {/* Wallet Selection */}
             <div className="space-y-3">
               <h3 className="font-medium">Select Account</h3>
-              <ScrollArea className="max-h-[200px] w-full">
-                <div className="space-y-2 pr-4">
+              <div className="max-h-[150px] w-full overflow-y-auto rounded-md border">
+                <div className="p-2 space-y-2">
                   {wallets.map((wallet, index) => (
                     <div
                       key={wallet.address}
                       className={`p-3 border rounded-lg cursor-pointer transition-colors ${
                         selectedWallet?.address === wallet.address
-                          ? 'border-primary bg-primary/5'
-                          : 'hover:bg-muted/50'
+                          ? "border-primary bg-primary/5"
+                          : "hover:bg-muted/50"
                       }`}
                       onClick={() => onWalletSelect(wallet)}
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <div className="font-medium">
-                            Account {index + 1}
-                          </div>
+                          <div className="font-medium">Account {index + 1}</div>
                           <div className="text-sm text-muted-foreground font-mono">
                             {truncateAddress(wallet.address)}
                           </div>
@@ -149,7 +147,7 @@ export function DAppConnection({
                     </div>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
             </div>
 
             <Separator />
