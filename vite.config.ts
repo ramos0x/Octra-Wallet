@@ -26,15 +26,4 @@ export default defineConfig({
       ],
     },
   },
-  // Add the proxy configuration here
-  server: {
-    proxy: {
-      '/api': { // When your frontend requests '/api/something'
-        target: 'https://octra.network', // It will be proxied to 'https://octra.network/something'
-        changeOrigin: true, // Needed for virtual hosted sites
-        rewrite: (path) => path.replace(/^\/api/, ''), // Removes '/api' prefix when forwarding
-        secure: true, // If the target is HTTPS (recommended)
-      },
-    },
-  },
 });
