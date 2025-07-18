@@ -16,6 +16,7 @@ function App() {
   const [selectedWalletForConnection, setSelectedWalletForConnection] = useState<Wallet | null>(null);
   const [transactionRequest, setTransactionRequest] = useState<DAppTransactionRequestType | null>(null);
   const [selectedWalletForTransaction, setSelectedWalletForTransaction] = useState<Wallet | null>(null);
+  const [connectedDAppWallet, setConnectedDAppWallet] = useState<Wallet | null>(null);
 
   // Listen for storage changes across tabs
   useEffect(() => {
@@ -131,6 +132,25 @@ function App() {
       const appName = urlParams.get('app_name');
       
       if (successUrl && failureUrl && origin) {
+        // Check if this dApp is already connected
+        const connections = JSON.parse(localStorage.getItem('connectedDApps') || '[]');
+        const existingConnection = connections.find((conn: any) => conn.origin === decodeURIComponent(origin));
+        
+        if (existingConnection) {
+          // dApp already connected, redirect to success with existing connection info
+          const successUrlObj = new URL(decodeURIComponent(successUrl));
+          successUrlObj.searchParams.set('account_id', existingConnection.selectedAddress);
+          
+          // Find the wallet with public key
+          const connectedWallet = wallets.find(w => w.address === existingConnection.selectedAddress);
+          if (connectedWallet && connectedWallet.publicKey) {
+            successUrlObj.searchParams.set('public_key', connectedWallet.publicKey);
+          }
+          
+          window.location.href = successUrlObj.toString();
+          return;
+        }
+        
         setConnectionRequest({
           origin: decodeURIComponent(origin),
           successUrl: decodeURIComponent(successUrl),
@@ -169,6 +189,22 @@ function App() {
     }
   }, []);
 
+  // Check for existing dApp connection when transaction request is made
+  useEffect(() => {
+    if (transactionRequest && wallets.length > 0) {
+      const connections = JSON.parse(localStorage.getItem('connectedDApps') || '[]');
+      const existingConnection = connections.find((conn: any) => conn.origin === transactionRequest.origin);
+      
+      if (existingConnection) {
+        // Find the connected wallet
+        const connectedWallet = wallets.find(w => w.address === existingConnection.selectedAddress);
+        if (connectedWallet) {
+          setConnectedDAppWallet(connectedWallet);
+          setSelectedWalletForTransaction(connectedWallet);
+        }
+      }
+    }
+  }, [transactionRequest, wallets]);
   const handleUnlock = (unlockedWallets: Wallet[]) => {
     setWallets(unlockedWallets);
     setIsLocked(false);
@@ -331,6 +367,7 @@ function App() {
             transactionRequest={transactionRequest}
             wallets={wallets}
             selectedWallet={selectedWalletForTransaction}
+            connectedWallet={connectedDAppWallet}
             onWalletSelect={setSelectedWalletForTransaction}
             onApprove={handleTransactionApprove}
             onReject={handleTransactionReject}

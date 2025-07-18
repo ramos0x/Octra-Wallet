@@ -15,6 +15,7 @@ interface DAppTransactionRequestProps {
   transactionRequest: DAppTransactionRequest;
   wallets: Wallet[];
   selectedWallet: Wallet | null;
+  connectedWallet?: Wallet | null;
   onWalletSelect: (wallet: Wallet) => void;
   onApprove: (txHash: string) => void;
   onReject: () => void;
@@ -24,6 +25,7 @@ export function TransactionRequestDialog({
   transactionRequest, 
   wallets, 
   selectedWallet, 
+  connectedWallet,
   onWalletSelect, 
   onApprove, 
   onReject 
@@ -217,10 +219,47 @@ export function TransactionRequestDialog({
 
             {/* Wallet Selection */}
             <div className="space-y-3">
-              <h3 className="font-medium">Select Account</h3>
+              <h3 className="font-medium">
+                {connectedWallet ? 'Connected Account' : 'Select Account'}
+              </h3>
+              {connectedWallet && (
+                <Alert>
+                  <Shield className="h-4 w-4" />
+                  <AlertDescription>
+                    This dApp is connected to your wallet. Using the previously selected account.
+                  </AlertDescription>
+                </Alert>
+              )}
               <div className="max-h-[150px] w-full overflow-y-auto rounded-md border">
                 <div className="p-2 space-y-2">
-                  {wallets.map((wallet, index) => (
+                  {connectedWallet ? (
+                    // Show only the connected wallet
+                    <div
+                      className="p-3 border border-primary bg-primary/5 rounded-lg"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium">Connected Account</div>
+                          <div className="text-sm text-muted-foreground font-mono">
+                            {truncateAddress(connectedWallet.address)}
+                          </div>
+                          {balance !== null && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              Balance: {balance.toFixed(8)} OCT
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Check className="h-5 w-5 text-primary" />
+                          {isLoadingBalance && (
+                            <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    // Show all wallets for selection
+                    wallets.map((wallet, index) => (
                     <div
                       key={wallet.address}
                       className={`p-3 border rounded-lg cursor-pointer transition-colors ${
@@ -254,7 +293,8 @@ export function TransactionRequestDialog({
                         </div>
                       </div>
                     </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
             </div>
