@@ -166,6 +166,18 @@ export interface DAppConnectionRequest {
   appIcon?: string;
 }
 
+export interface DAppTransactionRequest {
+  action: 'send';
+  to: string;
+  amount: string;
+  origin: string;
+  successUrl: string;
+  failureUrl: string;
+  appName?: string;
+  appIcon?: string;
+  message?: string;
+}
+
 export interface ConnectedDApp {
   origin: string;
   appName: string;

@@ -3,8 +3,9 @@ import { WelcomeScreen } from './components/WelcomeScreen';
 import { WalletDashboard } from './components/WalletDashboard';
 import { UnlockWallet } from './components/UnlockWallet';
 import { DAppConnection } from './components/DAppConnection';
+import { DAppTransactionRequest } from './components/DAppTransactionRequest';
 import { ThemeProvider } from './components/ThemeProvider';
-import { Wallet, DAppConnectionRequest } from './types/wallet';
+import { Wallet, DAppConnectionRequest, DAppTransactionRequest as DAppTransactionRequestType } from './types/wallet';
 import { Toaster } from '@/components/ui/toaster';
 
 function App() {
@@ -13,6 +14,8 @@ function App() {
   const [isLocked, setIsLocked] = useState(false);
   const [connectionRequest, setConnectionRequest] = useState<DAppConnectionRequest | null>(null);
   const [selectedWalletForConnection, setSelectedWalletForConnection] = useState<Wallet | null>(null);
+  const [transactionRequest, setTransactionRequest] = useState<DAppTransactionRequestType | null>(null);
+  const [selectedWalletForTransaction, setSelectedWalletForTransaction] = useState<Wallet | null>(null);
 
   // Listen for storage changes across tabs
   useEffect(() => {
@@ -94,21 +97,48 @@ function App() {
   }, [isLocked, wallets, wallet]);
 
   useEffect(() => {
-    // Check for dApp connection request in URL
+    // Check for dApp requests in URL
     const urlParams = new URLSearchParams(window.location.search);
-    const successUrl = urlParams.get('success_url');
-    const failureUrl = urlParams.get('failure_url');
-    const origin = urlParams.get('origin');
-    const appName = urlParams.get('app_name');
+    const action = urlParams.get('action');
     
-    if (successUrl && failureUrl && origin) {
-      setConnectionRequest({
-        origin: decodeURIComponent(origin),
-        successUrl: decodeURIComponent(successUrl),
-        failureUrl: decodeURIComponent(failureUrl),
-        permissions: ['view_address', 'view_balance', 'call_methods'],
-        appName: appName ? decodeURIComponent(appName) : undefined
-      });
+    if (action === 'send') {
+      // Handle transaction request
+      const to = urlParams.get('to');
+      const amount = urlParams.get('amount');
+      const successUrl = urlParams.get('success_url');
+      const failureUrl = urlParams.get('failure_url');
+      const origin = urlParams.get('origin');
+      const appName = urlParams.get('app_name');
+      const message = urlParams.get('message');
+      
+      if (to && amount && successUrl && failureUrl && origin) {
+        setTransactionRequest({
+          action: 'send',
+          to: decodeURIComponent(to),
+          amount: decodeURIComponent(amount),
+          origin: decodeURIComponent(origin),
+          successUrl: decodeURIComponent(successUrl),
+          failureUrl: decodeURIComponent(failureUrl),
+          appName: appName ? decodeURIComponent(appName) : undefined,
+          message: message ? decodeURIComponent(message) : undefined
+        });
+      }
+    } else if (action === null) {
+      // Check for dApp connection request (existing logic)
+      const successUrl = urlParams.get('success_url');
+      const failureUrl = urlParams.get('failure_url');
+      const origin = urlParams.get('origin');
+      const appName = urlParams.get('app_name');
+      
+      if (successUrl && failureUrl && origin) {
+        setConnectionRequest({
+          origin: decodeURIComponent(origin),
+          successUrl: decodeURIComponent(successUrl),
+          failureUrl: decodeURIComponent(failureUrl),
+          permissions: ['view_address', 'view_balance', 'call_methods'],
+          appName: appName ? decodeURIComponent(appName) : undefined
+        });
+      }
     }
 
     // Check if wallet is locked
@@ -185,6 +215,23 @@ function App() {
     
     // Redirect to failure URL
     window.location.href = connectionRequest.failureUrl;
+  };
+
+  const handleTransactionApprove = (txHash: string) => {
+    if (!transactionRequest) return;
+    
+    // Redirect to success URL with transaction hash
+    const successUrl = new URL(transactionRequest.successUrl);
+    successUrl.searchParams.set('tx_hash', txHash);
+    
+    window.location.href = successUrl.toString();
+  };
+
+  const handleTransactionReject = () => {
+    if (!transactionRequest) return;
+    
+    // Redirect to failure URL
+    window.location.href = transactionRequest.failureUrl;
   };
 
   const addWallet = (newWallet: Wallet) => {
@@ -269,6 +316,25 @@ function App() {
       <ThemeProvider defaultTheme="dark" storageKey="octra-wallet-theme">
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
           <UnlockWallet onUnlock={handleUnlock} />
+          <Toaster />
+        </div>
+      </ThemeProvider>
+    );
+  }
+
+  // Show dApp transaction request screen if there's a transaction request
+  if (transactionRequest && wallets.length > 0) {
+    return (
+      <ThemeProvider defaultTheme="dark" storageKey="octra-wallet-theme">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+          <DAppTransactionRequest
+            transactionRequest={transactionRequest}
+            wallets={wallets}
+            selectedWallet={selectedWalletForTransaction}
+            onWalletSelect={setSelectedWalletForTransaction}
+            onApprove={handleTransactionApprove}
+            onReject={handleTransactionReject}
+          />
           <Toaster />
         </div>
       </ThemeProvider>
