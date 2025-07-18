@@ -9,7 +9,7 @@ export function getActiveRPCProvider(): RPCProvider | null {
   }
   
   // Return default if no active provider
-  return {
+  const defaultProvider = {
     id: 'default',
     name: 'Octra Network (Default)',
     url: 'https://octra.network',
@@ -18,6 +18,11 @@ export function getActiveRPCProvider(): RPCProvider | null {
     isActive: true,
     createdAt: Date.now()
   };
+  
+  // Save default provider if none exists
+  localStorage.setItem('rpcProviders', JSON.stringify([defaultProvider]));
+  
+  return defaultProvider;
 }
 
 export async function makeRPCRequest(endpoint: string, options: RequestInit = {}): Promise<Response> {

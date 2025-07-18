@@ -51,7 +51,7 @@ export function Balance({ wallet, balance, onBalanceUpdate, isLoading = false }:
     } catch (error) {
       toast({
         title: "Error 500",
-        description: "Failed to refresh balance",
+        description: "Failed to refresh balance. Check RPC connection.",
         variant: "destructive",
       });
       console.error('Balance fetch error:', error);

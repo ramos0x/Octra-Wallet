@@ -84,6 +84,7 @@ export function WalletDashboard({
   const [walletToDelete, setWalletToDelete] = useState<Wallet | null>(null);
   const [showLockConfirm, setShowLockConfirm] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [isRefreshingData, setIsRefreshingData] = useState(false);
   const { toast } = useToast();
 
   // Initial data fetch when wallet is connected
@@ -134,6 +135,53 @@ export function WalletDashboard({
 
     fetchInitialData();
   }, [wallet, toast]);
+
+  // Function to refresh all wallet data
+  const refreshWalletData = async () => {
+    if (!wallet) return;
+    
+    setIsRefreshingData(true);
+    
+    try {
+      // Fetch balance and nonce
+      const balanceData = await fetchBalance(wallet.address);
+      setBalance(balanceData.balance);
+      setNonce(balanceData.nonce);
+      
+      // Fetch transaction history
+      const historyData = await getTransactionHistory(wallet.address);
+      
+      if (Array.isArray(historyData)) {
+        const transformedTxs = historyData.map((tx) => ({
+          ...tx,
+          type: tx.from?.toLowerCase() === wallet.address.toLowerCase() ? 'sent' : 'received'
+        } as Transaction));
+        setTransactions(transformedTxs);
+      }
+      
+      toast({
+        title: "Data Refreshed",
+        description: "Wallet data has been updated with new RPC provider",
+      });
+    } catch (error) {
+      console.error('Failed to refresh wallet data:', error);
+      toast({
+        title: "Refresh Failed",
+        description: "Failed to refresh data with new RPC provider",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshingData(false);
+    }
+  };
+
+  const handleRPCChange = () => {
+    // Close the RPC manager dialog
+    setShowRPCManager(false);
+    
+    // Refresh wallet data with new RPC
+    refreshWalletData();
+  };
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -633,7 +681,13 @@ export function WalletDashboard({
                   <DialogHeader>
                     <DialogTitle>RPC Provider Management</DialogTitle>
                   </DialogHeader>
-                  <RPCProviderManager onClose={() => setShowRPCManager(false)} />
+                  <RPCProviderManager 
+                    onClose={() => setShowRPCManager(false)} 
+                    onRPCChange={handleRPCChange}
+                  />
+                    onClose={() => setShowRPCManager(false)} 
+                    onRPCChange={handleRPCChange}
+                  />
                 </DialogContent>
               </Dialog>
               
@@ -677,6 +731,9 @@ export function WalletDashboard({
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <PieChart className="h-4 w-4" />
               <span className="hidden sm:inline">Overview</span>
+              {isRefreshingData && (
+                <div className="animate-spin h-3 w-3 border border-primary border-t-transparent rounded-full ml-1" />
+              )}
             </TabsTrigger>
             <TabsTrigger value="send" className="flex items-center gap-2">
               <Send className="h-4 w-4" />
@@ -701,7 +758,7 @@ export function WalletDashboard({
               wallet={wallet} 
               balance={balance}
               onBalanceUpdate={handleBalanceUpdate}
-              isLoading={isLoadingBalance}
+              isLoading={isLoadingBalance || isRefreshingData}
             />
           </TabsContent>
 

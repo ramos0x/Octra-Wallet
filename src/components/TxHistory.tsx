@@ -80,7 +80,7 @@ export function TxHistory({ wallet, transactions, onTransactionsUpdate, isLoadin
       console.error('Error fetching transactions:', error);
       toast({
         title: "Error",
-        description: "Refresh failed",
+        description: "Failed to fetch transactions. Check RPC connection.",
         variant: "destructive",
       });
     } finally {

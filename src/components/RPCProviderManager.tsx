@@ -12,9 +12,10 @@ import { useToast } from '@/hooks/use-toast';
 
 interface RPCProviderManagerProps {
   onClose?: () => void;
+  onRPCChange?: () => void;
 }
 
-export function RPCProviderManager({ onClose }: RPCProviderManagerProps) {
+export function RPCProviderManager({ onClose, onRPCChange }: RPCProviderManagerProps) {
   const [providers, setProviders] = useState<RPCProvider[]>([]);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingProvider, setEditingProvider] = useState<RPCProvider | null>(null);
@@ -184,6 +185,11 @@ export function RPCProviderManager({ onClose }: RPCProviderManagerProps) {
       title: "Primary Provider Set",
       description: "RPC provider has been set as primary",
     });
+    
+    // Trigger reload of wallet data with new RPC
+    if (onRPCChange) {
+      onRPCChange();
+    }
   };
 
   return (
