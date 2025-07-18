@@ -27,6 +27,7 @@ export function TransactionRequestDialog({
   onWalletSelect, 
   onApprove, 
   onReject 
+}: DAppTransactionRequestProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
   const [nonce, setNonce] = useState(0);
