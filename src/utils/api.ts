@@ -14,31 +14,56 @@ async function makeAPIRequest(endpoint: string, options: RequestInit = {}): Prom
     throw new Error('No RPC provider available');
   }
   
-  // Merge headers from RPC provider configuration
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...provider.headers
-  };
+  // Check if we're in development mode
+  const isDevelopment = import.meta.env.DEV;
   
-  // Safely merge options.headers if they exist
-  if (options.headers) {
-    const optionsHeaders = options.headers as Record<string, string>;
-    Object.assign(headers, optionsHeaders);
+  if (isDevelopment) {
+    // Development: Use Vite proxy
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...provider.headers
+    };
+    
+    if (options.headers) {
+      const optionsHeaders = options.headers as Record<string, string>;
+      Object.assign(headers, optionsHeaders);
+    }
+    
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `/api${cleanEndpoint}`;
+    headers['X-RPC-URL'] = provider.url;
+    
+    console.log(`[DEV] Making API request to: ${provider.url}${cleanEndpoint} (via proxy: ${url})`);
+    
+    return fetch(url, {
+      ...options,
+      headers
+    });
+  } else {
+    // Production: Direct request to RPC provider
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Octra-Web-Wallet/1.0',
+      'Accept': 'application/json',
+      ...provider.headers
+    };
+    
+    if (options.headers) {
+      const optionsHeaders = options.headers as Record<string, string>;
+      Object.assign(headers, optionsHeaders);
+    }
+    
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${provider.url}${cleanEndpoint}`;
+    
+    console.log(`[PROD] Making direct API request to: ${url}`);
+    
+    return fetch(url, {
+      ...options,
+      headers,
+      mode: 'cors'
+    });
   }
-  
-  // Always use proxy - ensure endpoint starts with /
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const url = `/api${cleanEndpoint}`;
-  
-  // Add RPC URL header for dynamic proxy routing
-  headers['X-RPC-URL'] = provider.url;
-  
-  console.log(`Making API request to: ${provider.url}${cleanEndpoint} (via proxy: ${url})`);
-  
-  return fetch(url, {
-    ...options,
-    headers
-  });
 }
 
 export async function fetchBalance(address: string): Promise<BalanceResponse> {

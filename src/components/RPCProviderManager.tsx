@@ -238,7 +238,7 @@ export function RPCProviderManager({ onClose, onRPCChange }: RPCProviderManagerP
                     onChange={(e) => setFormData({ ...formData, url: e.target.value })}
                   />
                   <p className="text-xs text-muted-foreground">
-                    In development mode, requests will be proxied through Vite to avoid CORS issues.
+                    Make sure the RPC server supports CORS for web requests. In development, requests are proxied through Vite.
                   </p>
                 </div>
 
