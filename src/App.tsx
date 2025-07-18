@@ -3,7 +3,7 @@ import { WelcomeScreen } from './components/WelcomeScreen';
 import { WalletDashboard } from './components/WalletDashboard';
 import { UnlockWallet } from './components/UnlockWallet';
 import { DAppConnection } from './components/DAppConnection';
-import { DAppTransactionRequest } from './components/DAppTransactionRequest';
+import { TransactionRequestDialog } from './components/DAppTransactionRequest';
 import { ThemeProvider } from './components/ThemeProvider';
 import { Wallet, DAppConnectionRequest, DAppTransactionRequest as DAppTransactionRequestType } from './types/wallet';
 import { Toaster } from '@/components/ui/toaster';
@@ -327,7 +327,7 @@ function App() {
     return (
       <ThemeProvider defaultTheme="dark" storageKey="octra-wallet-theme">
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-          <DAppTransactionRequest
+          <TransactionRequestDialog
             transactionRequest={transactionRequest}
             wallets={wallets}
             selectedWallet={selectedWalletForTransaction}

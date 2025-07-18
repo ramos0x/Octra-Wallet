@@ -20,14 +20,13 @@ interface DAppTransactionRequestProps {
   onReject: () => void;
 }
 
-export function DAppTransactionRequest({ 
+export function TransactionRequestDialog({ 
   transactionRequest, 
   wallets, 
   selectedWallet, 
   onWalletSelect, 
   onApprove, 
   onReject 
-}: DAppTransactionRequestProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [balance, setBalance] = useState<number | null>(null);
   const [nonce, setNonce] = useState(0);
