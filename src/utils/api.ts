@@ -26,13 +26,14 @@ async function makeAPIRequest(endpoint: string, options: RequestInit = {}): Prom
     Object.assign(headers, optionsHeaders);
   }
   
-  // Always use proxy in both development and production
-  const url = `/api${endpoint}`;
+  // Always use proxy - ensure endpoint starts with /
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `/api${cleanEndpoint}`;
   
   // Add RPC URL header for dynamic proxy routing
   headers['X-RPC-URL'] = provider.url;
   
-  console.log(`Making API request to: ${provider.url}${endpoint} (via proxy)`);
+  console.log(`Making API request to: ${provider.url}${cleanEndpoint} (via proxy: ${url})`);
   
   return fetch(url, {
     ...options,

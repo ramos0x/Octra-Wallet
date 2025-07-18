@@ -14,8 +14,20 @@ export default async function handler(req, res) {
     // Get custom RPC URL from header, fallback to default
     const rpcUrl = req.headers['x-rpc-url'] || 'https://octra.network';
     
+    // Get the path from the request URL
+    let targetPath = req.url;
+    
+    // Remove /api prefix if present
+    if (targetPath.startsWith('/api')) {
+      targetPath = targetPath.substring(4);
+    }
+    
+    // Ensure path starts with /
+    if (!targetPath.startsWith('/')) {
+      targetPath = '/' + targetPath;
+    }
+    
     // Construct the target URL
-    const targetPath = req.url.replace(/^\/api/, '');
     const targetUrl = `${rpcUrl}${targetPath}`;
     
     console.log(`Proxying request: ${req.method} ${targetUrl}`);
@@ -24,6 +36,7 @@ export default async function handler(req, res) {
     const targetHeaders = {
       'Content-Type': 'application/json',
       'User-Agent': 'Octra-Web-Wallet/1.0',
+      'Accept': 'application/json',
     };
     
     // Forward specific headers
@@ -50,15 +63,17 @@ export default async function handler(req, res) {
     // Get response data
     const responseText = await response.text();
     
+    console.log(`Response status: ${response.status}, body length: ${responseText.length}`);
+    
     // Set response status
     res.status(response.status);
     
-    // Forward response headers (excluding CORS headers that we set ourselves)
-    response.headers.forEach((value, key) => {
-      if (!key.toLowerCase().startsWith('access-control-')) {
-        res.setHeader(key, value);
-      }
-    });
+    // Set content type
+    if (response.headers.get('content-type')) {
+      res.setHeader('Content-Type', response.headers.get('content-type'));
+    } else {
+      res.setHeader('Content-Type', 'application/json');
+    }
     
     // Send the response
     res.send(responseText);
@@ -68,7 +83,9 @@ export default async function handler(req, res) {
     res.status(500).json({ 
       error: 'Proxy failed', 
       details: error.message,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      url: req.url,
+      method: req.method
     });
   }
 }
