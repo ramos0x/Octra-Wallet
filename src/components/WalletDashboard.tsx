@@ -38,7 +38,6 @@ import { ThemeToggle } from './ThemeToggle';
 import { ImportWallet } from './ImportWallet';
 import { GenerateWallet } from './GenerateWallet';
 import { RPCProviderManager } from './RPCProviderManager';
-import { RegisterDomain } from './RegisterDomain';
 import { ConnectedDAppsManager } from './ConnectedDAppsManager';
 import { Wallet } from '../types/wallet';
 import { fetchBalance, getTransactionHistory } from '../utils/api';
