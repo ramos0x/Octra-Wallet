@@ -20,9 +20,14 @@ async function makeAPIRequest(endpoint: string, options: RequestInit = {}): Prom
   // Merge headers from RPC provider configuration
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...provider.headers,
-    ...options.headers
+    ...provider.headers
   };
+  
+  // Safely merge options.headers if they exist
+  if (options.headers) {
+    const optionsHeaders = options.headers as Record<string, string>;
+    Object.assign(headers, optionsHeaders);
+  }
   
   if (isDevelopment) {
     // In development, use Vite proxy with custom header for dynamic routing
