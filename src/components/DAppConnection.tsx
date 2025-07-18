@@ -214,7 +214,10 @@ export function DAppConnection({
             <Alert>
               <Shield className="h-4 w-4" />
               <AlertDescription>
-                Only connect to websites you trust. This connection will allow the app to view your account information and request transactions.
+                {existingConnection 
+                  ? 'Updating this connection will change which wallet this dApp can access.'
+                  : 'Only connect to websites you trust. This connection will allow the app to view your account information and request transactions.'
+                }
               </AlertDescription>
             </Alert>
 
@@ -233,7 +236,7 @@ export function DAppConnection({
                 disabled={isProcessing || !selectedWallet}
                 className="flex-1"
               >
-                {isProcessing ? "Connecting..." : "Connect"}
+                {isProcessing ? "Connecting..." : (existingConnection ? "Update Connection" : "Connect")}
               </Button>
             </div>
           </CardContent>
