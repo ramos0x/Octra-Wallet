@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -23,7 +24,8 @@ import {
   Trash2,
   Check,
   Wifi,
-  Download
+  Download,
+  Menu
 } from 'lucide-react';
 import { Balance } from './Balance';
 import { MultiSend } from './MultiSend';
@@ -82,6 +84,7 @@ export function WalletDashboard({
   const [addWalletTab, setAddWalletTab] = useState('import');
   const [walletToDelete, setWalletToDelete] = useState<Wallet | null>(null);
   const [showLockConfirm, setShowLockConfirm] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const { toast } = useToast();
 
   // Initial data fetch when wallet is connected
@@ -430,31 +433,167 @@ export function WalletDashboard({
 
             <div className="flex items-center space-x-2">
               <ThemeToggle />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowRPCManager(true)}
-                className="flex items-center gap-2"
-              >
-                <Wifi className="h-4 w-4" />
-                <span className="hidden sm:inline">RPC</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowDAppsManager(true)}
-                className="flex items-center gap-2"
-              >
-                <Globe className="h-4 w-4" />
-                <span className="hidden sm:inline">dApps</span>
-              </Button>
+              
+              {/* Desktop Menu Items */}
+              <div className="hidden md:flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowRPCManager(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Wifi className="h-4 w-4" />
+                  RPC
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDAppsManager(true)}
+                  className="flex items-center gap-2"
+                >
+                  <Globe className="h-4 w-4" />
+                  dApps
+                </Button>
+                <Dialog open={showAddWalletDialog} onOpenChange={setShowAddWalletDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" />
+                      Add Wallet
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden">
+                    <DialogHeader>
+                      <DialogTitle>Add New Wallet</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex flex-col max-h-[calc(90vh-120px)]">
+                      <Tabs value={addWalletTab} onValueChange={setAddWalletTab} className="w-full flex flex-col">
+                        <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+                          <TabsTrigger value="import" className="flex items-center gap-2">
+                            <Download className="h-4 w-4" />
+                            Import
+                          </TabsTrigger>
+                          <TabsTrigger value="generate" className="flex items-center gap-2">
+                            <Plus className="h-4 w-4" />
+                            Generate
+                          </TabsTrigger>
+                        </TabsList>
+                        
+                        <div className="flex-1 overflow-hidden">
+                          <ScrollArea className="h-full max-h-[calc(90vh-180px)]">
+                            <div className="pr-4">
+                              <TabsContent value="import" className="mt-4 data-[state=inactive]:hidden">
+                                <ImportWallet onWalletImported={handleImportSuccess} />
+                              </TabsContent>
+                              
+                              <TabsContent value="generate" className="mt-4 data-[state=inactive]:hidden">
+                                <GenerateWallet onWalletGenerated={handleGenerateSuccess} />
+                              </TabsContent>
+                            </div>
+                          </ScrollArea>
+                        </div>
+                      </Tabs>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <AlertDialog open={showLockConfirm} onOpenChange={setShowLockConfirm}>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 flex items-center gap-2"
+                    >
+                      <Lock className="h-4 w-4" />
+                      Lock Wallet
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Lock Wallet</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to lock your wallet? You will need to enter your password to unlock it again.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDisconnect} className="bg-orange-600 hover:bg-orange-700">
+                        Lock Wallet
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+
+              {/* Mobile Hamburger Menu */}
+              <div className="md:hidden">
+                <Sheet open={showMobileMenu} onOpenChange={setShowMobileMenu}>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="sm">
+                      <Menu className="h-4 w-4" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-80">
+                    <SheetHeader>
+                      <SheetTitle>Menu</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-6 space-y-4">
+                      {/* RPC Provider */}
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowRPCManager(true);
+                          setShowMobileMenu(false);
+                        }}
+                        className="w-full justify-start gap-2"
+                      >
+                        <Wifi className="h-4 w-4" />
+                        RPC Provider
+                      </Button>
+
+                      {/* Connected dApps */}
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowDAppsManager(true);
+                          setShowMobileMenu(false);
+                        }}
+                        className="w-full justify-start gap-2"
+                      >
+                        <Globe className="h-4 w-4" />
+                        Connected dApps
+                      </Button>
+
+                      {/* Add Wallet */}
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowAddWalletDialog(true);
+                          setShowMobileMenu(false);
+                        }}
+                        className="w-full justify-start gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Wallet
+                      </Button>
+
+                      {/* Lock Wallet */}
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowLockConfirm(true);
+                          setShowMobileMenu(false);
+                        }}
+                        className="w-full justify-start gap-2 text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300"
+                      >
+                        <Lock className="h-4 w-4" />
+                        Lock Wallet
+                      </Button>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
+
+              {/* Dialogs - Keep outside of mobile menu for proper functionality */}
               <Dialog open={showAddWalletDialog} onOpenChange={setShowAddWalletDialog}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="hidden md:flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    <span className="md:inline">Add Wallet</span>
-                  </Button>
-                </DialogTrigger>
                 <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden">
                   <DialogHeader>
                     <DialogTitle>Add New Wallet</DialogTitle>
@@ -489,6 +628,7 @@ export function WalletDashboard({
                   </div>
                 </DialogContent>
               </Dialog>
+              
               <Dialog open={showRPCManager} onOpenChange={setShowRPCManager}>
                 <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
@@ -497,6 +637,7 @@ export function WalletDashboard({
                   <RPCProviderManager onClose={() => setShowRPCManager(false)} />
                 </DialogContent>
               </Dialog>
+              
               <Dialog open={showDAppsManager} onOpenChange={setShowDAppsManager}>
                 <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
@@ -508,17 +649,8 @@ export function WalletDashboard({
                   />
                 </DialogContent>
               </Dialog>
+              
               <AlertDialog open={showLockConfirm} onOpenChange={setShowLockConfirm}>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-orange-600 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 flex items-center gap-2"
-                  >
-                    <Lock className="h-4 w-4" />
-                    <span className="hidden md:inline">Lock Wallet</span>
-                  </Button>
-                </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Lock Wallet</AlertDialogTitle>
