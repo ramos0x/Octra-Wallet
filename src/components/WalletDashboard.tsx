@@ -533,7 +533,7 @@ export function WalletDashboard({
                   </SheetTrigger>
                   <SheetContent side="right" className="w-80">
                     <SheetHeader>
-                      <SheetTitle>Menu</SheetTitle>
+                      <SheetTitle>Additional Menu</SheetTitle>
                     </SheetHeader>
                     <div className="mt-6 space-y-4">
                       {/* RPC Provider */}
