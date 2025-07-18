@@ -14,9 +14,6 @@ async function makeAPIRequest(endpoint: string, options: RequestInit = {}): Prom
     throw new Error('No RPC provider available');
   }
   
-  // Check if we're in development mode
-  const isDevelopment = import.meta.env.DEV;
-  
   // Merge headers from RPC provider configuration
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -29,30 +26,18 @@ async function makeAPIRequest(endpoint: string, options: RequestInit = {}): Prom
     Object.assign(headers, optionsHeaders);
   }
   
-  if (isDevelopment) {
-    // In development, use Vite proxy with custom header for dynamic routing
-    const url = `/api${endpoint}`;
-    
-    // Add RPC URL header for dynamic proxy routing
-    headers['X-RPC-URL'] = provider.url;
-    
-    console.log(`Making API request to: ${provider.url}${endpoint} (via proxy)`);
-    
-    return fetch(url, {
-      ...options,
-      headers
-    });
-  } else {
-    // In production, make direct requests
-    const url = `${provider.url}${endpoint}`;
-    
-    console.log(`Making API request to: ${url}`);
-    
-    return fetch(url, {
-      ...options,
-      headers
-    });
-  }
+  // Always use proxy in both development and production
+  const url = `/api${endpoint}`;
+  
+  // Add RPC URL header for dynamic proxy routing
+  headers['X-RPC-URL'] = provider.url;
+  
+  console.log(`Making API request to: ${provider.url}${endpoint} (via proxy)`);
+  
+  return fetch(url, {
+    ...options,
+    headers
+  });
 }
 
 export async function fetchBalance(address: string): Promise<BalanceResponse> {
