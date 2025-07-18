@@ -1,12 +1,19 @@
 import { RPCProvider } from '../types/wallet';
 
 export function getActiveRPCProvider(): RPCProvider | null {
-  const providers = JSON.parse(localStorage.getItem('rpcProviders') || '[]');
-  const activeProvider = providers.find((p: RPCProvider) => p.isActive);
-  
-  if (activeProvider) {
-    return activeProvider;
+  try {
+    const providers = JSON.parse(localStorage.getItem('rpcProviders') || '[]');
+    const activeProvider = providers.find((p: RPCProvider) => p.isActive);
+    
+    if (activeProvider) {
+      console.log('Using RPC provider:', activeProvider.name, activeProvider.url);
+      return activeProvider;
+    }
+  } catch (error) {
+    console.error('Error loading RPC providers:', error);
   }
+  
+  console.log('No active RPC provider found, using default');
   
   // Return default if no active provider
   const defaultProvider = {
@@ -20,7 +27,11 @@ export function getActiveRPCProvider(): RPCProvider | null {
   };
   
   // Save default provider if none exists
-  localStorage.setItem('rpcProviders', JSON.stringify([defaultProvider]));
+  try {
+    localStorage.setItem('rpcProviders', JSON.stringify([defaultProvider]));
+  } catch (error) {
+    console.error('Error saving default RPC provider:', error);
+  }
   
   return defaultProvider;
 }

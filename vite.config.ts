@@ -16,17 +16,37 @@ export default defineConfig({
         configure: (proxy, options) => {
           // Handle dynamic target based on localStorage
           proxy.on('proxyReq', (proxyReq, req, res) => {
-            // Get RPC provider from request headers if available
+            // Get RPC URL from request headers for dynamic routing
             const rpcUrl = req.headers['x-rpc-url'];
             if (rpcUrl && typeof rpcUrl === 'string') {
               try {
                 const url = new URL(rpcUrl);
-                proxyReq.host = url.host;
-                proxyReq.hostname = url.hostname;
-                proxyReq.port = url.port || (url.protocol === 'https:' ? '443' : '80');
-                proxyReq.protocol = url.protocol;
+                
+                // Update the proxy target dynamically
+                const target = `${url.protocol}//${url.host}`;
+                
+                // Set the new target host
+                proxyReq.setHeader('host', url.host);
+                
+                // Log the dynamic routing
+                console.log(`Proxying request to: ${target}${req.url}`);
               } catch (error) {
                 console.warn('Invalid RPC URL in header:', rpcUrl);
+              }
+            }
+          });
+          
+          // Handle dynamic target change
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            const rpcUrl = req.headers['x-rpc-url'];
+            if (rpcUrl && typeof rpcUrl === 'string') {
+              try {
+                const url = new URL(rpcUrl);
+                // Change the target for this specific request
+                proxy.changeOrigin = true;
+                proxy.target = `${url.protocol}//${url.host}`;
+              } catch (error) {
+                console.warn('Failed to change proxy target:', error);
               }
             }
           });

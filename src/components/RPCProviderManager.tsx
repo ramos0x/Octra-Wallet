@@ -181,6 +181,11 @@ export function RPCProviderManager({ onClose, onRPCChange }: RPCProviderManagerP
       isActive: p.id === providerId
     }));
     saveProviders(updatedProviders);
+    
+    // Log the change for debugging
+    const newActiveProvider = updatedProviders.find(p => p.isActive);
+    console.log('RPC provider changed to:', newActiveProvider?.name, newActiveProvider?.url);
+    
     toast({
       title: "Primary Provider Set",
       description: "RPC provider has been set as primary",

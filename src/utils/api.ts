@@ -8,49 +8,40 @@ const MU_FACTOR = 1_000_000;
 
 // Use the active RPC provider for API requests
 async function makeAPIRequest(endpoint: string, options: RequestInit = {}): Promise<Response> {
+  const provider = getActiveRPCProvider();
+  
+  if (!provider) {
+    throw new Error('No RPC provider available');
+  }
+  
   // Check if we're in development mode
   const isDevelopment = import.meta.env.DEV;
   
+  // Merge headers from RPC provider configuration
+  const headers = {
+    'Content-Type': 'application/json',
+    ...provider.headers,
+    ...options.headers
+  };
+  
   if (isDevelopment) {
-    // In development, use Vite proxy
-    const provider = getActiveRPCProvider();
-    
-    if (!provider) {
-      throw new Error('No RPC provider available');
-    }
-    
-    // Use /api prefix for Vite proxy
+    // In development, use Vite proxy with custom header for dynamic routing
     const url = `/api${endpoint}`;
     
-    // Merge headers from RPC provider configuration + add RPC URL for dynamic proxy
-    const headers = {
-      'Content-Type': 'application/json',
-      'X-RPC-URL': provider.url, // Custom header for dynamic proxy
-      ...provider.headers,
-      ...options.headers
-    };
+    // Add RPC URL header for dynamic proxy routing
+    headers['X-RPC-URL'] = provider.url;
+    
+    console.log(`Making API request to: ${provider.url}${endpoint} (via proxy)`);
     
     return fetch(url, {
       ...options,
       headers
     });
   } else {
-    // In production, make direct requests (CORS should be handled by server)
-    const provider = getActiveRPCProvider();
-    
-    if (!provider) {
-      throw new Error('No RPC provider available');
-    }
-    
-    // Construct full URL using the active RPC provider
+    // In production, make direct requests
     const url = `${provider.url}${endpoint}`;
     
-    // Merge headers from RPC provider configuration
-    const headers = {
-      'Content-Type': 'application/json',
-      ...provider.headers,
-      ...options.headers
-    };
+    console.log(`Making API request to: ${url}`);
     
     return fetch(url, {
       ...options,
