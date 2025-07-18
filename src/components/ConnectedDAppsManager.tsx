@@ -42,7 +42,27 @@ export function ConnectedDAppsManager({ wallets, onClose }: ConnectedDAppsManage
 
   const loadConnectedDApps = () => {
     const connections = JSON.parse(localStorage.getItem('connectedDApps') || '[]');
-    setConnectedDApps(connections);
+    
+    // Remove duplicates based on origin
+    const uniqueConnections = connections.reduce((acc: ConnectedDApp[], current: ConnectedDApp) => {
+      const existingIndex = acc.findIndex(item => item.origin === current.origin);
+      if (existingIndex >= 0) {
+        // Keep the most recent connection (higher connectedAt timestamp)
+        if (current.connectedAt > acc[existingIndex].connectedAt) {
+          acc[existingIndex] = current;
+        }
+      } else {
+        acc.push(current);
+      }
+      return acc;
+    }, []);
+    
+    // Save cleaned connections back to localStorage
+    if (uniqueConnections.length !== connections.length) {
+      localStorage.setItem('connectedDApps', JSON.stringify(uniqueConnections));
+    }
+    
+    setConnectedDApps(uniqueConnections);
   };
 
   const saveConnectedDApps = (updatedDApps: ConnectedDApp[]) => {
@@ -66,6 +86,7 @@ export function ConnectedDAppsManager({ wallets, onClose }: ConnectedDAppsManage
     const selectedWallet = wallets.find(w => w.address === selectedWalletAddress);
     if (!selectedWallet) return;
     
+    // Update the connection for this specific origin
     const updatedDApps = connectedDApps.map(dapp => 
       dapp.origin === selectedDApp.origin 
         ? { ...dapp, selectedAddress: selectedWallet.address }

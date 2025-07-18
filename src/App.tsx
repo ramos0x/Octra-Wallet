@@ -193,19 +193,14 @@ function App() {
       const connections = JSON.parse(localStorage.getItem('connectedDApps') || '[]');
       const existingConnection = connections.find((conn: any) => conn.origin === connectionRequest.origin);
       
-      if (existingConnection) {
-        // dApp already connected, but still show connection dialog to allow wallet change
-        // Set the currently connected wallet as selected
-        const connectedWallet = wallets.find(w => w.address === existingConnection.selectedAddress);
-        if (connectedWallet) {
-          setSelectedWalletForConnection(connectedWallet);
+      // Always set a default wallet selection
+      if (!selectedWalletForConnection && wallets.length > 0) {
+        if (existingConnection) {
+          // If there's an existing connection, try to use that wallet
+          const connectedWallet = wallets.find(w => w.address === existingConnection.selectedAddress);
+          setSelectedWalletForConnection(connectedWallet || wallets[0]);
         } else {
-          // If connected wallet not found, default to first wallet
-          setSelectedWalletForConnection(wallets[0]);
-        }
-      } else {
-        // If not connected, set the first wallet as selected by default
-        if (!selectedWalletForConnection && wallets.length > 0) {
+          // If no existing connection, use first wallet
           setSelectedWalletForConnection(wallets[0]);
         }
       }

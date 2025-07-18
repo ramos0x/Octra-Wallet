@@ -52,6 +52,10 @@ export function DAppConnection({
     try {
       // Store connection
       const connections = JSON.parse(localStorage.getItem('connectedDApps') || '[]');
+      
+      // Remove existing connection for this origin first
+      const filteredConnections = connections.filter((conn: any) => conn.origin !== connectionRequest.origin);
+      
       const newConnection = {
         origin: connectionRequest.origin,
         appName: connectionRequest.appName || connectionRequest.origin,
@@ -60,10 +64,16 @@ export function DAppConnection({
         selectedAddress: selectedWallet.address
       };
       
-      // Remove existing connection for this origin if any
-      const filteredConnections = connections.filter((conn: any) => conn.origin !== connectionRequest.origin);
+      // Add the new connection
       filteredConnections.push(newConnection);
+      
+      // Save updated connections
       localStorage.setItem('connectedDApps', JSON.stringify(filteredConnections));
+      
+      toast({
+        title: existingConnection ? "Connection Updated" : "Connection Approved",
+        description: `${connectionRequest.appName || 'dApp'} is now connected to ${selectedWallet.address.slice(0, 8)}...${selectedWallet.address.slice(-6)}`,
+      });
       
       onApprove(selectedWallet);
     } catch (error) {
