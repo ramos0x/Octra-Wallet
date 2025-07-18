@@ -1,21 +1,32 @@
 // api.ts
 import { BalanceResponse, Transaction, AddressHistoryResponse, TransactionDetails, PendingTransaction, StagingResponse, EncryptedBalanceResponse, PendingPrivateTransfer, PrivateTransferResult, ClaimResult } from '../types/wallet';
 import { encryptClientBalance } from './crypto';
+import { getActiveRPCProvider } from './rpc';
 import * as nacl from 'tweetnacl';
 
 const MU_FACTOR = 1_000_000;
 
-// Use the proxy endpoint instead of direct RPC calls to avoid CORS
+// Use the active RPC provider for API requests
 async function makeAPIRequest(endpoint: string, options: RequestInit = {}): Promise<Response> {
-  // Use the /api proxy configured in vite.config.ts
-  const url = `/api${endpoint}`;
+  const provider = getActiveRPCProvider();
+  
+  if (!provider) {
+    throw new Error('No RPC provider available');
+  }
+  
+  // Construct full URL using the active RPC provider
+  const url = `${provider.url}${endpoint}`;
+  
+  // Merge headers from RPC provider configuration
+  const headers = {
+    'Content-Type': 'application/json',
+    ...provider.headers,
+    ...options.headers
+  };
   
   return fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers
-    }
+    headers
   });
 }
 
