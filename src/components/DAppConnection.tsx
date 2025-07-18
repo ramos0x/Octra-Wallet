@@ -28,7 +28,15 @@ export function DAppConnection({
   onReject 
 }: DAppConnectionProps) {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [existingConnection, setExistingConnection] = useState<any>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    // Check if this dApp is already connected
+    const connections = JSON.parse(localStorage.getItem('connectedDApps') || '[]');
+    const existing = connections.find((conn: any) => conn.origin === connectionRequest.origin);
+    setExistingConnection(existing);
+  }, [connectionRequest.origin]);
 
   const handleApprove = async () => {
     if (!selectedWallet) {
@@ -126,11 +134,21 @@ export function DAppConnection({
               )}
             </div>
             <CardTitle className="text-xl">
-              {connectionRequest.appName || 'Unknown App'} wants to connect
+              {existingConnection 
+                ? `Update connection for ${connectionRequest.appName || 'Unknown App'}`
+                : `${connectionRequest.appName || 'Unknown App'} wants to connect`
+              }
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               {connectionRequest.origin}
             </p>
+            {existingConnection && (
+              <div className="mt-2">
+                <Badge variant="secondary" className="text-xs">
+                  Previously connected to {truncateAddress(existingConnection.selectedAddress)}
+                </Badge>
+              </div>
+            )}
           </CardHeader>
           
           <CardContent className="space-y-6">

@@ -194,31 +194,20 @@ function App() {
       const existingConnection = connections.find((conn: any) => conn.origin === connectionRequest.origin);
       
       if (existingConnection) {
-        // dApp already connected, redirect to success with existing connection info
-        const successUrlObj = new URL(connectionRequest.successUrl);
-        successUrlObj.searchParams.set('account_id', existingConnection.selectedAddress);
-        
-        // Find the wallet with public key
+        // dApp already connected, but still show connection dialog to allow wallet change
+        // Set the currently connected wallet as selected
         const connectedWallet = wallets.find(w => w.address === existingConnection.selectedAddress);
-        if (connectedWallet && connectedWallet.publicKey) {
-          successUrlObj.searchParams.set('public_key', connectedWallet.publicKey);
+        if (connectedWallet) {
+          setSelectedWalletForConnection(connectedWallet);
+        } else {
+          // If connected wallet not found, default to first wallet
+          setSelectedWalletForConnection(wallets[0]);
         }
-        
-        // Clear the connection request
-        setConnectionRequest(null);
-        setSelectedWalletForConnection(null);
-        
-        // Clear URL parameters
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Redirect to success URL
-        window.location.href = successUrlObj.toString();
-        return;
-      }
-      
-      // If not connected, set the first wallet as selected by default
-      if (!selectedWalletForConnection && wallets.length > 0) {
-        setSelectedWalletForConnection(wallets[0]);
+      } else {
+        // If not connected, set the first wallet as selected by default
+        if (!selectedWalletForConnection && wallets.length > 0) {
+          setSelectedWalletForConnection(wallets[0]);
+        }
       }
     }
   }, [connectionRequest, wallets, selectedWalletForConnection]);

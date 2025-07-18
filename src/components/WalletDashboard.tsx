@@ -37,6 +37,7 @@ import { ImportWallet } from './ImportWallet';
 import { GenerateWallet } from './GenerateWallet';
 import { RPCProviderManager } from './RPCProviderManager';
 import { RegisterDomain } from './RegisterDomain';
+import { ConnectedDAppsManager } from './ConnectedDAppsManager';
 import { Wallet } from '../types/wallet';
 import { fetchBalance, getTransactionHistory } from '../utils/api';
 import { useToast } from '@/hooks/use-toast';
@@ -77,6 +78,7 @@ export function WalletDashboard({
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showAddWalletDialog, setShowAddWalletDialog] = useState(false);
   const [showRPCManager, setShowRPCManager] = useState(false);
+  const [showDAppsManager, setShowDAppsManager] = useState(false);
   const [addWalletTab, setAddWalletTab] = useState('import');
   const [walletToDelete, setWalletToDelete] = useState<Wallet | null>(null);
   const [showLockConfirm, setShowLockConfirm] = useState(false);
@@ -437,6 +439,15 @@ export function WalletDashboard({
                 <Wifi className="h-4 w-4" />
                 <span className="hidden sm:inline">RPC</span>
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowDAppsManager(true)}
+                className="flex items-center gap-2"
+              >
+                <Globe className="h-4 w-4" />
+                <span className="hidden sm:inline">dApps</span>
+              </Button>
               <Dialog open={showAddWalletDialog} onOpenChange={setShowAddWalletDialog}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" className="hidden md:flex items-center gap-2">
@@ -484,6 +495,17 @@ export function WalletDashboard({
                     <DialogTitle>RPC Provider Management</DialogTitle>
                   </DialogHeader>
                   <RPCProviderManager onClose={() => setShowRPCManager(false)} />
+                </DialogContent>
+              </Dialog>
+              <Dialog open={showDAppsManager} onOpenChange={setShowDAppsManager}>
+                <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Connected dApps Management</DialogTitle>
+                  </DialogHeader>
+                  <ConnectedDAppsManager 
+                    wallets={wallets} 
+                    onClose={() => setShowDAppsManager(false)} 
+                  />
                 </DialogContent>
               </Dialog>
               <AlertDialog open={showLockConfirm} onOpenChange={setShowLockConfirm}>
