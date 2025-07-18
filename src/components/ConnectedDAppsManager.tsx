@@ -225,16 +225,16 @@ export function ConnectedDAppsManager({ wallets, onClose }: ConnectedDAppsManage
                       
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-medium truncate">{dapp.appName}</h3>
+                          <h3 className="font-medium truncate text-sm sm:text-base">{dapp.appName}</h3>
                           <Badge variant="outline" className="text-xs">
                             Connected
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground truncate mb-2">
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate mb-2">
                           {dapp.origin}
                         </p>
                         
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Users className="h-3 w-3" />
                             <span>{getWalletDisplayName(dapp.selectedAddress)}</span>
@@ -244,7 +244,7 @@ export function ConnectedDAppsManager({ wallets, onClose }: ConnectedDAppsManage
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-2 mt-1 sm:mt-2">
                           <span className="text-xs text-muted-foreground">Permissions:</span>
                           <div className="flex items-center gap-1">
                             {dapp.permissions.map((permission, index) => (
@@ -257,19 +257,20 @@ export function ConnectedDAppsManager({ wallets, onClose }: ConnectedDAppsManage
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="sm" 
                         onClick={() => window.open(dapp.origin, '_blank')}
                         title="Visit dApp"
+                        className="h-8 w-8 p-0 sm:h-9 sm:w-9"
                       >
                         <ExternalLink className="h-4 w-4" />
                       </Button>
                       
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 sm:h-9 sm:w-9">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -298,7 +299,7 @@ export function ConnectedDAppsManager({ wallets, onClose }: ConnectedDAppsManage
 
       {/* Change Wallet Dialog */}
       <Dialog open={showChangeWalletDialog} onOpenChange={setShowChangeWalletDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md mx-4 max-w-[calc(100vw-2rem)]">
           <DialogHeader>
             <DialogTitle>Change Connected Wallet</DialogTitle>
           </DialogHeader>
@@ -311,9 +312,9 @@ export function ConnectedDAppsManager({ wallets, onClose }: ConnectedDAppsManage
                     {selectedDApp.appName.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <div className="font-medium">{selectedDApp.appName}</div>
-                  <div className="text-sm text-muted-foreground">{selectedDApp.origin}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{selectedDApp.appName}</div>
+                  <div className="text-sm text-muted-foreground truncate">{selectedDApp.origin}</div>
                 </div>
               </div>
 
@@ -326,9 +327,9 @@ export function ConnectedDAppsManager({ wallets, onClose }: ConnectedDAppsManage
                   <SelectContent>
                     {wallets.map((wallet, index) => (
                       <SelectItem key={wallet.address} value={wallet.address}>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 w-full">
                           <span>Account {index + 1}</span>
-                          <span className="text-muted-foreground font-mono text-xs">
+                          <span className="text-muted-foreground font-mono text-xs truncate">
                             {truncateAddress(wallet.address)}
                           </span>
                         </div>
@@ -345,18 +346,18 @@ export function ConnectedDAppsManager({ wallets, onClose }: ConnectedDAppsManage
                 </AlertDescription>
               </Alert>
 
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   variant="outline"
                   onClick={() => setShowChangeWalletDialog(false)}
-                  className="flex-1"
+                  className="flex-1 order-2 sm:order-1"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleChangeWallet}
                   disabled={!selectedWalletAddress || selectedWalletAddress === selectedDApp.selectedAddress}
-                  className="flex-1"
+                  className="flex-1 order-1 sm:order-2"
                 >
                   Change Wallet
                 </Button>
