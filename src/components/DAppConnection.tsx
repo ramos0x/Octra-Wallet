@@ -42,6 +42,21 @@ export function DAppConnection({
 
     setIsProcessing(true);
     try {
+      // Store connection
+      const connections = JSON.parse(localStorage.getItem('connectedDApps') || '[]');
+      const newConnection = {
+        origin: connectionRequest.origin,
+        appName: connectionRequest.appName || connectionRequest.origin,
+        connectedAt: Date.now(),
+        permissions: connectionRequest.permissions,
+        selectedAddress: selectedWallet.address
+      };
+      
+      // Remove existing connection for this origin if any
+      const filteredConnections = connections.filter((conn: any) => conn.origin !== connectionRequest.origin);
+      filteredConnections.push(newConnection);
+      localStorage.setItem('connectedDApps', JSON.stringify(filteredConnections));
+      
       onApprove(selectedWallet);
     } catch (error) {
       console.error('Connection approval error:', error);
@@ -50,8 +65,9 @@ export function DAppConnection({
         description: "Failed to approve connection",
         variant: "destructive",
       });
-    } finally {
       setIsProcessing(false);
+    } finally {
+      // Don't set isProcessing to false here since we're redirecting
     }
   };
 

@@ -124,7 +124,7 @@ function App() {
           message: message ? decodeURIComponent(message) : undefined
         });
       }
-    } else if (action === null) {
+    } else {
       // Check for dApp connection request (existing logic)
       const successUrl = urlParams.get('success_url');
       const failureUrl = urlParams.get('failure_url');
@@ -132,25 +132,6 @@ function App() {
       const appName = urlParams.get('app_name');
       
       if (successUrl && failureUrl && origin) {
-        // Check if this dApp is already connected
-        const connections = JSON.parse(localStorage.getItem('connectedDApps') || '[]');
-        const existingConnection = connections.find((conn: any) => conn.origin === decodeURIComponent(origin));
-        
-        if (existingConnection) {
-          // dApp already connected, redirect to success with existing connection info
-          const successUrlObj = new URL(decodeURIComponent(successUrl));
-          successUrlObj.searchParams.set('account_id', existingConnection.selectedAddress);
-          
-          // Find the wallet with public key
-          const connectedWallet = wallets.find(w => w.address === existingConnection.selectedAddress);
-          if (connectedWallet && connectedWallet.publicKey) {
-            successUrlObj.searchParams.set('public_key', connectedWallet.publicKey);
-          }
-          
-          window.location.href = successUrlObj.toString();
-          return;
-        }
-        
         setConnectionRequest({
           origin: decodeURIComponent(origin),
           successUrl: decodeURIComponent(successUrl),
@@ -205,6 +186,42 @@ function App() {
       }
     }
   }, [transactionRequest, wallets]);
+
+  // Check for existing dApp connection when connection request is made
+  useEffect(() => {
+    if (connectionRequest && wallets.length > 0) {
+      const connections = JSON.parse(localStorage.getItem('connectedDApps') || '[]');
+      const existingConnection = connections.find((conn: any) => conn.origin === connectionRequest.origin);
+      
+      if (existingConnection) {
+        // dApp already connected, redirect to success with existing connection info
+        const successUrlObj = new URL(connectionRequest.successUrl);
+        successUrlObj.searchParams.set('account_id', existingConnection.selectedAddress);
+        
+        // Find the wallet with public key
+        const connectedWallet = wallets.find(w => w.address === existingConnection.selectedAddress);
+        if (connectedWallet && connectedWallet.publicKey) {
+          successUrlObj.searchParams.set('public_key', connectedWallet.publicKey);
+        }
+        
+        // Clear the connection request
+        setConnectionRequest(null);
+        setSelectedWalletForConnection(null);
+        
+        // Clear URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Redirect to success URL
+        window.location.href = successUrlObj.toString();
+        return;
+      }
+      
+      // If not connected, set the first wallet as selected by default
+      if (!selectedWalletForConnection && wallets.length > 0) {
+        setSelectedWalletForConnection(wallets[0]);
+      }
+    }
+  }, [connectionRequest, wallets, selectedWalletForConnection]);
   const handleUnlock = (unlockedWallets: Wallet[]) => {
     setWallets(unlockedWallets);
     setIsLocked(false);
@@ -226,28 +243,33 @@ function App() {
   const handleConnectionApprove = (selectedWallet: Wallet) => {
     if (!connectionRequest) return;
     
-    // Store connection
-    const connections = JSON.parse(localStorage.getItem('connectedDApps') || '[]');
-    const newConnection = {
-      origin: connectionRequest.origin,
-      appName: connectionRequest.appName || connectionRequest.origin,
-      connectedAt: Date.now(),
-      permissions: connectionRequest.permissions,
-      selectedAddress: selectedWallet.address
-    };
-    connections.push(newConnection);
-    localStorage.setItem('connectedDApps', JSON.stringify(connections));
-    
     // Redirect to success URL with wallet info
     const successUrl = new URL(connectionRequest.successUrl);
     successUrl.searchParams.set('account_id', selectedWallet.address);
-    successUrl.searchParams.set('public_key', selectedWallet.publicKey || '');
+    if (selectedWallet.publicKey) {
+      successUrl.searchParams.set('public_key', selectedWallet.publicKey);
+    }
     
+    // Clear the connection request before redirecting
+    setConnectionRequest(null);
+    setSelectedWalletForConnection(null);
+    
+    // Clear URL parameters
+    window.history.replaceState({}, document.title, window.location.pathname);
+    
+    // Redirect to success URL
     window.location.href = successUrl.toString();
   };
 
   const handleConnectionReject = () => {
     if (!connectionRequest) return;
+    
+    // Clear the connection request before redirecting
+    setConnectionRequest(null);
+    setSelectedWalletForConnection(null);
+    
+    // Clear URL parameters
+    window.history.replaceState({}, document.title, window.location.pathname);
     
     // Redirect to failure URL
     window.location.href = connectionRequest.failureUrl;
