@@ -222,10 +222,13 @@ export function RPCProviderManager({ onClose }: RPCProviderManagerProps) {
                   <Label htmlFor="provider-url">URL</Label>
                   <Input
                     id="provider-url"
-                    placeholder="https://rpc.example.com"
+                    placeholder="https://octra.network"
                     value={formData.url}
                     onChange={(e) => setFormData({ ...formData, url: e.target.value })}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    In development mode, requests will be proxied through Vite to avoid CORS issues.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
