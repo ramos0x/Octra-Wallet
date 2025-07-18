@@ -685,9 +685,6 @@ export function WalletDashboard({
                     onClose={() => setShowRPCManager(false)} 
                     onRPCChange={handleRPCChange}
                   />
-                    onClose={() => setShowRPCManager(false)} 
-                    onRPCChange={handleRPCChange}
-                  />
                 </DialogContent>
               </Dialog>
               
