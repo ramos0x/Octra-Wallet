@@ -12,7 +12,7 @@ export interface ONSError {
 }
 
 // Default ONS resolver URL - can be configured
-const ONS_RESOLVER_URL = import.meta.env.VITE_ONS_RESOLVER_URL || 'https://ons-api.octra.network';
+const ONS_RESOLVER_URL = import.meta.env.VITE_ONS_RESOLVER_URL || 'http://localhost:3001';
 
 export function isONSDomain(input: string): boolean {
   // Check if it's a valid ONS domain format: alphanumeric + dots, ending with .oct
