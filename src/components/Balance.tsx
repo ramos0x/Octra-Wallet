@@ -37,7 +37,23 @@ export function Balance({ wallet, balance, onBalanceUpdate, isLoading = false }:
       
       // Check if RPC failed (negative balance indicates failure)
       if (balanceData.balance < 0) {
-        throw new Error('RPC connection failed');
+        // RPC failed, reset all balances to 0
+        onBalanceUpdate(0);
+        setEncryptedBalance({
+          public: 0,
+          public_raw: 0,
+          encrypted: 0,
+          encrypted_raw: 0,
+          total: 0
+        });
+        setPendingTransfers([]);
+        
+        toast({
+          title: "Error 500",
+          description: "Failed to refresh balance. Check RPC connection.",
+          variant: "destructive",
+        });
+        return;
       }
       
       onBalanceUpdate(balanceData.balance);
@@ -77,10 +93,12 @@ export function Balance({ wallet, balance, onBalanceUpdate, isLoading = false }:
         setPendingTransfers([]);
       }
       
-      toast({
-        title: "Balance Updated",
-        description: "Balance has been refreshed successfully",
-      });
+      if (balanceData.balance >= 0) {
+        toast({
+          title: "Balance Updated",
+          description: "Balance has been refreshed successfully",
+        });
+      }
     } catch (error) {
       // Reset all balances to 0 when RPC fails
       onBalanceUpdate(0);
