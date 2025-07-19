@@ -15,18 +15,24 @@ import { ExportPrivateKeys } from './ExportPrivateKeys';
 interface BalanceProps {
   wallet: WalletType | null;
   balance: number | null;
+  encryptedBalance?: any;
+  onEncryptedBalanceUpdate?: (encryptedBalance: any) => void;
   onBalanceUpdate: (balance: number) => void;
   isLoading?: boolean;
 }
 
-export function Balance({ wallet, balance, onBalanceUpdate, isLoading = false }: BalanceProps) {
+export function Balance({ wallet, balance, encryptedBalance: propEncryptedBalance, onEncryptedBalanceUpdate, onBalanceUpdate, isLoading = false }: BalanceProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [showPrivateKey, setShowPrivateKey] = useState(false);
-  const [encryptedBalance, setEncryptedBalance] = useState<any>(null);
+  const [localEncryptedBalance, setLocalEncryptedBalance] = useState<any>(null);
   const [pendingTransfers, setPendingTransfers] = useState<any[]>([]);
   const [showEncryptDialog, setShowEncryptDialog] = useState(false);
   const [showDecryptDialog, setShowDecryptDialog] = useState(false);
   const { toast } = useToast();
+
+  // Use prop encrypted balance if provided, otherwise use local state
+  const encryptedBalance = propEncryptedBalance || localEncryptedBalance;
+  const setEncryptedBalance = onEncryptedBalanceUpdate || setLocalEncryptedBalance;
 
   const fetchWalletBalance = async () => {
     if (!wallet) return;

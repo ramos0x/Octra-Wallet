@@ -85,6 +85,7 @@ export function WalletDashboard({
   const [showLockConfirm, setShowLockConfirm] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [isRefreshingData, setIsRefreshingData] = useState(false);
+  const [encryptedBalance, setEncryptedBalance] = useState<any>(null);
   const { toast } = useToast();
 
   // Initial data fetch when wallet is connected
@@ -183,6 +184,13 @@ export function WalletDashboard({
       setBalance(0);
       setNonce(0);
       setTransactions([]);
+      setEncryptedBalance({
+        public: 0,
+        public_raw: 0,
+        encrypted: 0,
+        encrypted_raw: 0,
+        total: 0
+      });
       
       toast({
         title: "Refresh Failed",
@@ -773,6 +781,8 @@ export function WalletDashboard({
             <Balance 
               wallet={wallet} 
               balance={balance}
+              encryptedBalance={encryptedBalance}
+              onEncryptedBalanceUpdate={setEncryptedBalance}
               onBalanceUpdate={handleBalanceUpdate}
               isLoading={isLoadingBalance || isRefreshingData}
             />
