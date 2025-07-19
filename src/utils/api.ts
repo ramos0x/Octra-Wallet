@@ -325,10 +325,6 @@ export async function fetchPendingTransactionByHash(hash: string): Promise<Pendi
     return null;
   }
 }
-    ...options,
-    headers
-  });
-}
 
 export async function fetchBalance(address: string): Promise<BalanceResponse> {
   try {
@@ -514,33 +510,6 @@ export async function decryptBalance(address: string, amount: number, privateKey
   }
 }
 
-export async function getAddressInfo(address: string): Promise<any> {
-  try {
-    const response = await makeAPIRequest(`/address/${address}`);
-    if (response.ok) {
-      return await response.json();
-    }
-    return null;
-  } catch (error) {
-    console.error('Error fetching address info:', error);
-    return null;
-  }
-}
-
-export async function getPublicKey(address: string): Promise<string | null> {
-  try {
-    const response = await makeAPIRequest(`/public_key/${address}`);
-    if (response.ok) {
-      const data = await response.json();
-      return data.public_key;
-    }
-    return null;
-  } catch (error) {
-    console.error('Error fetching public key:', error);
-    return null;
-  }
-}
-
 export async function createPrivateTransfer(fromAddress: string, toAddress: string, amount: number, fromPrivateKey: string): Promise<PrivateTransferResult> {
   try {
     const addressInfo = await getAddressInfo(toAddress);
@@ -647,44 +616,6 @@ export async function claimPrivateTransfer(recipientAddress: string, privateKey:
   }
 }
 
-export async function sendTransaction(transaction: Transaction): Promise<{ success: boolean; hash?: string; error?: string }> {
-  try {
-    console.log('Sending transaction:', JSON.stringify(transaction, null, 2));
-    
-    const response = await makeAPIRequest(`/send-tx`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(transaction),
-    });
-
-    const text = await response.text();
-    console.log('Server response:', response.status, text);
-
-    if (response.ok) {
-      try {
-        const data = JSON.parse(text);
-        if (data.status === 'accepted') {
-          return { success: true, hash: data.tx_hash };
-        }
-      } catch {
-        const hashMatch = text.match(/OK\s+([0-9a-fA-F]{64})/);
-        if (hashMatch) {
-          return { success: true, hash: hashMatch[1] };
-        }
-      }
-      return { success: true, hash: text };
-    }
-
-    console.error('Transaction failed:', text);
-    return { success: false, error: text };
-  } catch (error) {
-    console.error('Error sending transaction:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
-  }
-}
-
 export function createTransaction(
   senderAddress: string,
   recipientAddress: string,
@@ -751,80 +682,6 @@ export function createTransaction(
   return transaction;
 }
 
-// New function to fetch pending transactions from staging
-export async function fetchPendingTransactions(address: string): Promise<PendingTransaction[]> {
-  try {
-    const response = await makeAPIRequest(`/staging`);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Failed to fetch pending transactions:', response.status, errorText);
-      throw new Error(`Error ${response.status}`);
-    }
-    
-    const responseText = await response.text();
-    let data: StagingResponse;
-    
-    try {
-      data = JSON.parse(responseText);
-      
-      if (!data.staged_transactions || !Array.isArray(data.staged_transactions)) {
-        console.warn('Staging response does not contain staged_transactions array:', data);
-        return [];
-      }
-    } catch (parseError) {
-      console.error('Failed to parse staging JSON:', parseError);
-      return [];
-    }
-    
-    // Filter transactions for the specific address
-    const userTransactions = data.staged_transactions.filter(tx => 
-      tx.from.toLowerCase() === address.toLowerCase() || 
-      tx.to.toLowerCase() === address.toLowerCase()
-    );
-    
-    return userTransactions;
-  } catch (error) {
-    console.error('Error fetching pending transactions:', error);
-    return [];
-  }
-}
-
-// New function to fetch specific pending transaction by hash
-export async function fetchPendingTransactionByHash(hash: string): Promise<PendingTransaction | null> {
-  try {
-    const response = await makeAPIRequest(`/staging`);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Failed to fetch pending transactions:', response.status, errorText);
-      throw new Error(`Error ${response.status}`);
-    }
-    
-    const responseText = await response.text();
-    let data: StagingResponse;
-    
-    try {
-      data = JSON.parse(responseText);
-      
-      if (!data.staged_transactions || !Array.isArray(data.staged_transactions)) {
-        console.warn('Staging response does not contain staged_transactions array:', data);
-        return null;
-      }
-    } catch (parseError) {
-      console.error('Failed to parse staging JSON:', parseError);
-      return null;
-    }
-    
-    // Find transaction by hash
-    const transaction = data.staged_transactions.find(tx => tx.hash === hash);
-    return transaction || null;
-  } catch (error) {
-    console.error('Error fetching pending transaction by hash:', error);
-    return null;
-  }
-}
-
 // Updated interface to match actual API response
 interface AddressApiResponse {
   address: string;
@@ -838,116 +695,6 @@ interface AddressApiResponse {
     hash: string;
     url: string;
   }>;
-}
-
-export async function fetchTransactionHistory(address: string): Promise<AddressHistoryResponse> {
-  try {
-    // Fetch both confirmed and pending transactions
-    const [confirmedResponse, pendingTransactions] = await Promise.all([
-      makeAPIRequest(`/address/${address}`),
-      fetchPendingTransactions(address)
-    ]);
-    
-    if (!confirmedResponse.ok) {
-      const errorText = await confirmedResponse.text();
-      console.error('Failed to fetch transaction history:', confirmedResponse.status, errorText);
-      throw new Error(`Error ${confirmedResponse.status}`);
-    }
-    
-    const responseText = await confirmedResponse.text();
-    let apiData: AddressApiResponse;
-    
-    try {
-      apiData = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Failed to parse transaction history JSON:', parseError);
-      throw new Error('Invalid JSON response from server');
-    }
-    
-    // Fetch details for each confirmed transaction
-    const confirmedTransactionPromises = apiData.recent_transactions.map(async (recentTx) => {
-      try {
-        const txDetails = await fetchTransactionDetails(recentTx.hash);
-        
-        // Transform to our expected format
-        return {
-          hash: txDetails.tx_hash,
-          from: txDetails.parsed_tx.from,
-          to: txDetails.parsed_tx.to,
-          amount: parseFloat(txDetails.parsed_tx.amount),
-          timestamp: txDetails.parsed_tx.timestamp,
-          status: 'confirmed' as const,
-          type: txDetails.parsed_tx.from.toLowerCase() === address.toLowerCase() ? 'sent' as const : 'received' as const
-        };
-      } catch (error) {
-        console.error('Failed to fetch transaction details for hash:', recentTx.hash, error);
-        // Return a basic transaction object if details fetch fails
-        return {
-          hash: recentTx.hash,
-          from: 'unknown',
-          to: 'unknown',
-          amount: 0,
-          timestamp: Date.now() / 1000,
-          status: 'confirmed' as const,
-          type: 'received' as const
-        };
-      }
-    });
-    
-    const confirmedTransactions = await Promise.all(confirmedTransactionPromises);
-    
-    // Transform pending transactions to our expected format
-    const pendingTransactionsFormatted = pendingTransactions.map(tx => ({
-      hash: tx.hash,
-      from: tx.from,
-      to: tx.to,
-      amount: parseFloat(tx.amount),
-      timestamp: tx.timestamp,
-      status: 'pending' as const,
-      type: tx.from.toLowerCase() === address.toLowerCase() ? 'sent' as const : 'received' as const
-    }));
-    
-    // Combine and sort by timestamp (newest first)
-    const allTransactions = [...pendingTransactionsFormatted, ...confirmedTransactions]
-      .sort((a, b) => b.timestamp - a.timestamp);
-    
-    const result: AddressHistoryResponse = {
-      transactions: allTransactions,
-      balance: parseFloat(apiData.balance)
-    };
-    
-    return result;
-  } catch (error) {
-    console.error('Error fetching transaction history:', error);
-    throw error;
-  }
-}
-
-export async function fetchTransactionDetails(hash: string): Promise<TransactionDetails> {
-  try {
-    const response = await makeAPIRequest(`/tx/${hash}`);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Failed to fetch transaction details:', response.status, errorText);
-      throw new Error(`Error ${response.status}`);
-    }
-    
-    const responseText = await response.text();
-    let data: TransactionDetails;
-    
-    try {
-      data = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Failed to parse transaction details JSON:', parseError);
-      throw new Error('Invalid JSON response from server');
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Error fetching transaction details:', error);
-    throw error;
-  }
 }
 
 // Wrapper functions for compatibility with existing components
