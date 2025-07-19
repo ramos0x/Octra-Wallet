@@ -29,8 +29,8 @@ Octra Web Wallet is an open-source web interface that allows users to easily and
 
 ```bash
 # Clone the repository
-git clone https://github.com/m-tq/Octra-Web-Wallet.git
-cd octra-web-wallet
+git clone https://github.com/m-tq/Octra-Wallet.git
+cd octra-wallet
 
 # Install dependencies
 npm install
