@@ -96,31 +96,16 @@ sudo crontab -e
 
 ### Dynamic RPC Configuration
 
-The application automatically handles RPC provider switching:
+The application uses a smart fallback system for RPC requests:
 - **Development**: Uses Vite proxy for CORS handling
-- **Production**: Makes direct requests to RPC providers (CORS must be enabled on RPC server)
+- **Production**: 
+  1. First tries direct request to RPC provider
+  2. If CORS fails, automatically falls back to nginx proxy
+  3. Users can change RPC providers seamlessly through the UI
 
-Users can change RPC providers through the UI, and the application will automatically use the selected provider without requiring nginx reconfiguration.
+This ensures maximum compatibility with any RPC provider, regardless of their CORS configuration.
 
 ### Troubleshooting
 
-**CORS Issues in Production:**
-If you encounter CORS issues with certain RPC providers, you can add a simple proxy endpoint:
-
-```nginx
-# Add this to your nginx config if needed
-location /rpc-proxy/ {
-    # Remove /rpc-proxy prefix and proxy to any RPC
-    rewrite ^/rpc-proxy/(.*)$ /$1 break;
-    
-    # This would require additional logic to handle dynamic targets
-    # For now, direct requests work better for flexibility
-    proxy_pass $arg_target;
-    proxy_set_header Host $proxy_host;
-    proxy_ssl_server_name on;
-    
-    # CORS headers
-    add_header Access-Control-Allow-Origin *;
-    add_header Access-Control-Allow-Methods "GET, POST, OPTIONS";
-    add_header Access-Control-Allow-Headers "Content-Type, Authorization";
-}
+**RPC Connection Issues:**
+The application automatically handles CORS issues through the fallback proxy system. If you still encounter issues:

@@ -111,6 +111,8 @@ if command -v nginx &> /dev/null; then
     else
         print_error "Nginx configuration test failed"
     fi
+else
+    print_warning "Nginx not found. Please install nginx and configure manually."
 fi
 
 print_status "Deployment completed successfully!"
@@ -122,5 +124,6 @@ echo "1. Configure your domain in $NGINX_CONFIG"
 echo "2. Set up SSL certificates (Let's Encrypt recommended)"
 echo "3. Enable the nginx site: sudo ln -s $NGINX_CONFIG /etc/nginx/sites-enabled/"
 echo "4. Test and reload nginx: sudo nginx -t && sudo systemctl reload nginx"
+echo "5. The app will automatically handle RPC CORS issues through fallback proxy"
 echo
 echo "🌐 Your Octra Web Wallet will be available at your configured domain"
