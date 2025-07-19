@@ -12,10 +12,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Upload, FileText, AlertTriangle, Wallet as WalletIcon, CheckCircle, ExternalLink, Copy, Zap, Trash2 } from 'lucide-react';
 import { Wallet } from '../types/wallet';
 import { fetchBalance, sendTransaction, createTransaction } from '../utils/api';
+import { validateRecipientInput, resolveRecipientAddress } from '../utils/ons';
 import { useToast } from '@/hooks/use-toast';
 
 interface FileRecipient {
   address: string;
+  resolvedAddress?: string;
   amount: string;
   isValid: boolean;
   error?: string;
@@ -39,11 +41,6 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
   const [isSending, setIsSending] = useState(false);
   const [results, setResults] = useState<Array<{ success: boolean; hash?: string; error?: string; recipient: string; amount: string }>>([]);
   const { toast } = useToast();
-
-  const validateAddress = (address: string) => {
-    const octAddressRegex = /^oct[1-9A-HJ-NP-Za-km-z]{44}$/;
-    return octAddressRegex.test(address);
-  };
 
   const calculateFee = (amount: number) => {
     return amount < 1000 ? 0.001 : 0.003;
@@ -77,6 +74,7 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
       let amount = '';
       let error = '';
       let isValid = false;
+      let resolvedAddress = '';
 
       if (amountMode === 'different') {
         // Format: address,amount atau address amount
@@ -94,11 +92,31 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
         amount = sameAmount;
       }
 
-      // Validate address format
-      if (validateAddress(address)) {
+      // Validate and resolve address
+      const validation = validateRecipientInput(address);
+      if (validation.isValid) {
+        if (validation.type === 'address') {
+          resolvedAddress = address;
+          isValid = true;
+        } else if (validation.type === 'ons') {
+          try {
+            const resolution = await resolveRecipientAddress(address);
+            if (resolution.address) {
+              resolvedAddress = resolution.address;
+              isValid = true;
+            } else {
+              error = resolution.error || 'Failed to resolve ONS domain';
+              isValid = false;
+            }
+          } catch (resolveError) {
+            error = 'Failed to resolve ONS domain';
+            isValid = false;
+          }
+        }
+        
         if (!error) {
           if (amountMode === 'same') {
-            isValid = true;
+            // isValid already set above
           } else {
             isValid = !!amount && !isNaN(Number(amount)) && Number(amount) > 0;
           }
@@ -106,7 +124,7 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
           isValid = false;
         }
       } else {
-        error = 'Invalid address format';
+        error = validation.error || 'Invalid address format';
         isValid = false;
       }
 
@@ -118,6 +136,7 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
 
       parsedRecipients.push({
         address,
+        resolvedAddress,
         amount,
         isValid,
         error
@@ -265,7 +284,7 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
         // Prepare all transactions in the batch
         for (let i = 0; i < batch.length; i++) {
           const recipient = batch[i];
-          const finalRecipientAddress = recipient.address;
+          const finalRecipientAddress = recipient.resolvedAddress!;
           const txIndex = batchIdx * batchSize + i;
           const transactionNonce = currentNonce + 1 + txIndex;
 
@@ -442,21 +461,21 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
           <div className="text-xs text-muted-foreground space-y-1">
             {amountMode === 'same' ? (
               <>
-                <div>• One address per line</div>
+                <div>• One address or ONS domain per line</div>
                 <div>• Example:</div>
                 <div className="font-mono bg-background p-2 rounded mt-1">
                   oct1234567890abcdef1234567890abcdef12345678<br/>
-                  oct9876543210fedcba9876543210fedcba98765432
+                  alice.oct
                 </div>
               </>
             ) : (
               <>
-                <div>• Format: address,amount or address amount</div>
+                <div>• Format: address,amount or domain.oct,amount</div>
                 <div>• One entry per line</div>
                 <div>• Example:</div>
                 <div className="font-mono bg-background p-2 rounded mt-1">
                   oct1234567890abcdef1234567890abcdef12345678,1.5<br/>
-                  oct9876543210fedcba9876543210fedcba98765432,0.5
+                  bob.oct,0.5
                 </div>
               </>
             )}
@@ -478,7 +497,7 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
             </div>
             <div>
               <p className="text-lg font-medium">Drop .txt file containing your octra address here</p>
-              <p className="text-sm text-muted-foreground">or click to browse</p>
+              <p className="text-sm text-muted-foreground">Supports Octra addresses and ONS domains</p>
             </div>
             <div>
               <input
@@ -533,6 +552,11 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
                             )}
                             <span className="font-mono text-sm truncate">{recipient.address}</span>
                           </div>
+                          {recipient.resolvedAddress && recipient.resolvedAddress !== recipient.address && (
+                            <div className="text-xs text-muted-foreground mt-1 font-mono">
+                              → {recipient.resolvedAddress}
+                            </div>
+                          )}
                           {recipient.error && (
                             <div className="text-xs text-red-600 mt-1">{recipient.error}</div>
                           )}

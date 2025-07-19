@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ExternalLink, Shield, Send, X, Check, AlertTriangle, Calculator, MessageSquare } from 'lucide-react';
 import { Wallet, DAppTransactionRequest } from '../types/wallet';
 import { fetchBalance, sendTransaction, createTransaction } from '../utils/api';
+import { validateRecipientInput, resolveRecipientAddress } from '../utils/ons';
 import { useToast } from '@/hooks/use-toast';
 
 interface DAppTransactionRequestProps {
@@ -34,7 +35,41 @@ export function TransactionRequestDialog({
   const [balance, setBalance] = useState<number | null>(null);
   const [nonce, setNonce] = useState(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [resolvedToAddress, setResolvedToAddress] = useState<string | null>(null);
+  const [isResolvingAddress, setIsResolvingAddress] = useState(false);
   const { toast } = useToast();
+
+  // Resolve the 'to' address when component mounts
+  useEffect(() => {
+    const resolveToAddress = async () => {
+      if (!transactionRequest.to) return;
+      
+      const validation = validateRecipientInput(transactionRequest.to);
+      if (!validation.isValid) {
+        setResolvedToAddress(transactionRequest.to); // Use as-is if invalid
+        return;
+      }
+      
+      if (validation.type === 'address') {
+        setResolvedToAddress(transactionRequest.to);
+        return;
+      }
+      
+      if (validation.type === 'ons') {
+        setIsResolvingAddress(true);
+        try {
+          const resolution = await resolveRecipientAddress(transactionRequest.to);
+          setResolvedToAddress(resolution.address || transactionRequest.to);
+        } catch (error) {
+          setResolvedToAddress(transactionRequest.to); // Fallback to original
+        } finally {
+          setIsResolvingAddress(false);
+        }
+      }
+    };
+    
+    resolveToAddress();
+  }, [transactionRequest.to]);
 
   // Fetch balance when wallet is selected
   useEffect(() => {
@@ -102,7 +137,7 @@ export function TransactionRequestDialog({
 
       const transaction = createTransaction(
         selectedWallet.address,
-        transactionRequest.to,
+        resolvedToAddress || transactionRequest.to,
         amount,
         currentNonce + 1,
         selectedWallet.privateKey,
@@ -185,7 +220,17 @@ export function TransactionRequestDialog({
               <div className="space-y-2 p-3 bg-muted rounded-md">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">To:</span>
-                  <span className="font-mono text-sm">{truncateAddress(transactionRequest.to)}</span>
+                  <div className="text-right">
+                    <span className="font-mono text-sm">{truncateAddress(transactionRequest.to)}</span>
+                    {resolvedToAddress && resolvedToAddress !== transactionRequest.to && (
+                      <div className="text-xs text-muted-foreground font-mono">
+                        → {truncateAddress(resolvedToAddress)}
+                      </div>
+                    )}
+                    {isResolvingAddress && (
+                      <div className="text-xs text-muted-foreground">Resolving...</div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">Amount:</span>
@@ -350,7 +395,8 @@ export function TransactionRequestDialog({
                   !selectedWallet || 
                   balance === null || 
                   totalCost > currentBalance ||
-                  isLoadingBalance
+                  isLoadingBalance ||
+                  isResolvingAddress
                 }
                 className="flex-1"
               >

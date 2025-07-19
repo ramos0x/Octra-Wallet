@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Shield, AlertTriangle, Wallet as WalletIcon, CheckCircle, ExternalLink, Copy, Loader2 } from 'lucide-react';
+import { Shield, AlertTriangle, Wallet as WalletIcon, CheckCircle, ExternalLink, Copy, Loader2, Globe } from 'lucide-react';
 import { Wallet } from '../types/wallet';
 import { fetchEncryptedBalance, createPrivateTransfer, getAddressInfo } from '../utils/api';
+import { validateRecipientInput, resolveRecipientAddress } from '../utils/ons';
 import { useToast } from '@/hooks/use-toast';
 
 interface PrivateTransferProps {
@@ -18,6 +19,10 @@ interface PrivateTransferProps {
 
 export function PrivateTransfer({ wallet, onTransactionSuccess }: PrivateTransferProps) {
   const [recipientAddress, setRecipientAddress] = useState('');
+  const [resolvedAddress, setResolvedAddress] = useState<string | null>(null);
+  const [recipientType, setRecipientType] = useState<'address' | 'ons' | null>(null);
+  const [isResolving, setIsResolving] = useState(false);
+  const [resolutionError, setResolutionError] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isCheckingRecipient, setIsCheckingRecipient] = useState(false);
@@ -33,28 +38,78 @@ export function PrivateTransfer({ wallet, onTransactionSuccess }: PrivateTransfe
     }
   }, [wallet]);
 
-  // Check recipient when address changes
+  // Resolve recipient address when input changes
+  useEffect(() => {
+    const resolveRecipient = async () => {
+      if (!recipientAddress.trim()) {
+        setResolvedAddress(null);
+        setRecipientType(null);
+        setResolutionError(null);
+        setRecipientInfo(null);
+        return;
+      }
+
+      const validation = validateRecipientInput(recipientAddress);
+      if (!validation.isValid) {
+        setResolvedAddress(null);
+        setRecipientType(null);
+        setResolutionError(validation.error || 'Invalid input');
+        setRecipientInfo(null);
+        return;
+      }
+
+      if (validation.type === 'address') {
+        setResolvedAddress(recipientAddress.trim());
+        setRecipientType('address');
+        setResolutionError(null);
+        return;
+      }
+
+      if (validation.type === 'ons') {
+        setIsResolving(true);
+        setResolutionError(null);
+        
+        try {
+          const resolution = await resolveRecipientAddress(recipientAddress);
+          if (resolution.address) {
+            setResolvedAddress(resolution.address);
+            setRecipientType('ons');
+            setResolutionError(null);
+          } else {
+            setResolvedAddress(null);
+            setRecipientType('ons');
+            setResolutionError(resolution.error || 'Failed to resolve ONS domain');
+          }
+        } catch (error) {
+          setResolvedAddress(null);
+          setRecipientType('ons');
+          setResolutionError('Failed to resolve ONS domain');
+        } finally {
+          setIsResolving(false);
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(resolveRecipient, 500);
+    return () => clearTimeout(timeoutId);
+  }, [recipientAddress, wallet?.address]);
+
+  // Check recipient info when resolved address changes
   useEffect(() => {
     const checkRecipient = async () => {
-      const finalAddress = recipientAddress;
-      if (!finalAddress || finalAddress.length < 10) {
+      if (!resolvedAddress) {
         setRecipientInfo(null);
         return;
       }
 
-      if (!finalAddress.startsWith('oct') || finalAddress.length < 40) {
-        setRecipientInfo(null);
-        return;
-      }
-
-      if (finalAddress === wallet?.address) {
+      if (resolvedAddress === wallet?.address) {
         setRecipientInfo({ error: "Cannot send to yourself" });
         return;
       }
 
       setIsCheckingRecipient(true);
       try {
-        const info = await getAddressInfo(finalAddress);
+        const info = await getAddressInfo(resolvedAddress);
         setRecipientInfo(info);
       } catch (error) {
         setRecipientInfo({ error: "Failed to check recipient" });
@@ -63,14 +118,9 @@ export function PrivateTransfer({ wallet, onTransactionSuccess }: PrivateTransfe
       }
     };
 
-    const timeoutId = setTimeout(checkRecipient, 500);
+    const timeoutId = setTimeout(checkRecipient, 300);
     return () => clearTimeout(timeoutId);
-  }, [recipientAddress, wallet?.address]);
-
-  const validateAddress = (address: string) => {
-    const octAddressRegex = /^oct[1-9A-HJ-NP-Za-km-z]{44}$/;
-    return octAddressRegex.test(address);
-  };
+  }, [resolvedAddress, wallet?.address]);
 
   const validateAmount = (amountStr: string) => {
     const num = parseFloat(amountStr);
@@ -103,12 +153,12 @@ export function PrivateTransfer({ wallet, onTransactionSuccess }: PrivateTransfe
       return;
     }
 
-    const finalRecipientAddress = recipientAddress;
+    const finalRecipientAddress = resolvedAddress;
     
-    if (!validateAddress(finalRecipientAddress)) {
+    if (!finalRecipientAddress) {
       toast({
         title: "Error",
-        description: "Invalid recipient address",
+        description: resolutionError || "Invalid recipient address",
         variant: "destructive",
       });
       return;
@@ -269,21 +319,66 @@ export function PrivateTransfer({ wallet, onTransactionSuccess }: PrivateTransfe
           <Label htmlFor="recipient">Recipient Address</Label>
           <Input
             id="recipient"
-            placeholder="oct..."
+            placeholder="oct... or domain.oct"
             value={recipientAddress}
             onChange={(e) => setRecipientAddress(e.target.value)}
             className="font-mono"
           />
           
           {/* Recipient Status */}
-          {isCheckingRecipient && (
+          {(isResolving || isCheckingRecipient) && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Checking recipient...
+              {isResolving ? 'Resolving...' : 'Checking recipient...'}
             </div>
           )}
           
-          {recipientInfo && !isCheckingRecipient && (
+          {recipientType && !isResolving && !isCheckingRecipient && (
+            <div className="space-y-2">
+              {recipientType === 'address' && resolvedAddress && (
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-green-600">Valid Octra address</span>
+                </div>
+              )}
+              
+              {recipientType === 'ons' && resolvedAddress && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-blue-500" />
+                    <span className="text-sm text-blue-600">ONS domain resolved</span>
+                  </div>
+                  <div className="p-2 bg-blue-50 dark:bg-blue-950/50 rounded text-sm">
+                    <span className="text-muted-foreground">Resolves to:</span>
+                    <div className="font-mono text-xs break-all mt-1">{resolvedAddress}</div>
+                  </div>
+                </div>
+              )}
+              
+              {resolutionError && (
+                <div className="text-sm text-red-600">{resolutionError}</div>
+              )}
+              
+              {recipientInfo && recipientInfo.error && (
+                <div className="text-sm text-red-600">{recipientInfo.error}</div>
+              )}
+              
+              {recipientInfo && !recipientInfo.error && (
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground">
+                    Balance: {recipientInfo.balance || '0'} OCT
+                  </div>
+                  {!recipientInfo.has_public_key && (
+                    <div className="text-sm text-red-600">
+                      ⚠️ Recipient has no public key. They need to make a transaction first.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {recipientInfo && !isCheckingRecipient && recipientInfo.error && (
             <div className="space-y-2">
               {recipientInfo.error ? (
                 <div className="text-sm text-red-600">{recipientInfo.error}</div>
@@ -402,7 +497,8 @@ export function PrivateTransfer({ wallet, onTransactionSuccess }: PrivateTransfe
           onClick={handleSend}
           disabled={
             isSending || 
-            !validateAddress(recipientAddress) || 
+            !resolvedAddress ||
+            isResolving ||
             !validateAmount(amount) || 
             !recipientInfo ||
             recipientInfo.error ||
