@@ -40,7 +40,7 @@ import { GenerateWallet } from './GenerateWallet';
 import { RPCProviderManager } from './RPCProviderManager';
 import { ConnectedDAppsManager } from './ConnectedDAppsManager';
 import { Wallet } from '../types/wallet';
-import { fetchBalance, getTransactionHistory } from '../utils/api';
+import { fetchBalance, getTransactionHistory, fetchEncryptedBalance } from '../utils/api';
 import { useToast } from '@/hooks/use-toast';
 
 interface Transaction {
@@ -157,7 +157,6 @@ export function WalletDashboard({
       
       // Fetch encrypted balance when RPC provider changes
       try {
-        const { fetchEncryptedBalance } = await import('../utils/api');
         const encData = await fetchEncryptedBalance(wallet.address, wallet.privateKey);
         if (encData) {
           setEncryptedBalance(encData);
