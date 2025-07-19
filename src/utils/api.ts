@@ -45,7 +45,286 @@ async function makeAPIRequest(endpoint: string, options: RequestInit = {}): Prom
   
   console.log(`Making API request to: ${provider.url}${cleanEndpoint} (via proxy: ${url})`);
   
-  return fetch(url, {
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      // Add timeout to prevent hanging requests
+      signal: AbortSignal.timeout(30000) // 30 second timeout
+    });
+    
+    return response;
+  } catch (error) {
+    console.error(`API request failed for ${url}:`, error);
+    // Return a failed response object instead of throwing
+    return new Response(null, {
+      status: 500,
+      statusText: 'Network Error',
+      headers: new Headers()
+    });
+  }
+}
+
+// Helper function to safely parse JSON responses
+async function safeJsonParse(response: Response): Promise<any> {
+  try {
+    const text = await response.text();
+    if (!text.trim()) {
+      throw new Error('Empty response body');
+    }
+    return JSON.parse(text);
+  } catch (error) {
+    console.error('Failed to parse JSON response:', error);
+    throw new Error('Invalid JSON response from server');
+  }
+}
+
+// Update other API functions to use the helper
+export async function getAddressInfo(address: string): Promise<any> {
+  try {
+    const response = await makeAPIRequest(`/address/${address}`);
+    if (response.ok) {
+      return await safeJsonParse(response);
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching address info:', error);
+    return null;
+  }
+}
+
+export async function getPublicKey(address: string): Promise<string | null> {
+  try {
+    const response = await makeAPIRequest(`/public_key/${address}`);
+    if (response.ok) {
+      const data = await safeJsonParse(response);
+      return data.public_key;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error fetching public key:', error);
+    return null;
+  }
+}
+
+export async function sendTransaction(transaction: Transaction): Promise<{ success: boolean; hash?: string; error?: string }> {
+  try {
+    console.log('Sending transaction:', JSON.stringify(transaction, null, 2));
+    
+    const response = await makeAPIRequest(`/send-tx`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(transaction),
+    });
+
+    const text = await response.text();
+    console.log('Server response:', response.status, text);
+
+    if (response.ok) {
+      try {
+        const data = JSON.parse(text);
+        if (data.status === 'accepted') {
+          return { success: true, hash: data.tx_hash };
+        }
+      } catch {
+        const hashMatch = text.match(/OK\s+([0-9a-fA-F]{64})/);
+        if (hashMatch) {
+          return { success: true, hash: hashMatch[1] };
+        }
+      }
+      return { success: true, hash: text };
+    }
+
+    console.error('Transaction failed:', text);
+    return { success: false, error: text || 'Transaction failed' };
+  } catch (error) {
+    console.error('Error sending transaction:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Network error occurred' };
+  }
+}
+
+// Update fetchTransactionHistory to handle errors better
+export async function fetchTransactionHistory(address: string): Promise<AddressHistoryResponse> {
+  try {
+    // Fetch both confirmed and pending transactions
+    const [confirmedResponse, pendingTransactions] = await Promise.all([
+      makeAPIRequest(`/address/${address}`),
+      fetchPendingTransactions(address).catch(() => []) // Return empty array on error
+    ]);
+    
+    if (!confirmedResponse.ok) {
+      const errorText = await confirmedResponse.text();
+      console.error('Failed to fetch transaction history:', confirmedResponse.status, errorText);
+      // Return empty history instead of throwing
+      return {
+        transactions: [],
+        balance: 0
+      };
+    }
+    
+    let apiData: AddressApiResponse;
+    try {
+      apiData = await safeJsonParse(confirmedResponse);
+    } catch (parseError) {
+      console.error('Failed to parse transaction history JSON:', parseError);
+      return {
+        transactions: [],
+        balance: 0
+      };
+    }
+    
+    // Fetch details for each confirmed transaction
+    const confirmedTransactionPromises = apiData.recent_transactions.map(async (recentTx) => {
+      try {
+        const txDetails = await fetchTransactionDetails(recentTx.hash);
+        
+        // Transform to our expected format
+        return {
+          hash: txDetails.tx_hash,
+          from: txDetails.parsed_tx.from,
+          to: txDetails.parsed_tx.to,
+          amount: parseFloat(txDetails.parsed_tx.amount),
+          timestamp: txDetails.parsed_tx.timestamp,
+          status: 'confirmed' as const,
+          type: txDetails.parsed_tx.from.toLowerCase() === address.toLowerCase() ? 'sent' as const : 'received' as const
+        };
+      } catch (error) {
+        console.error('Failed to fetch transaction details for hash:', recentTx.hash, error);
+        // Return a basic transaction object if details fetch fails
+        return {
+          hash: recentTx.hash,
+          from: 'unknown',
+          to: 'unknown',
+          amount: 0,
+          timestamp: Date.now() / 1000,
+          status: 'confirmed' as const,
+          type: 'received' as const
+        };
+      }
+    });
+    
+    const confirmedTransactions = await Promise.all(confirmedTransactionPromises);
+    
+    // Transform pending transactions to our expected format
+    const pendingTransactionsFormatted = pendingTransactions.map(tx => ({
+      hash: tx.hash,
+      from: tx.from,
+      to: tx.to,
+      amount: parseFloat(tx.amount),
+      timestamp: tx.timestamp,
+      status: 'pending' as const,
+      type: tx.from.toLowerCase() === address.toLowerCase() ? 'sent' as const : 'received' as const
+    }));
+    
+    // Combine and sort by timestamp (newest first)
+    const allTransactions = [...pendingTransactionsFormatted, ...confirmedTransactions]
+      .sort((a, b) => b.timestamp - a.timestamp);
+    
+    const result: AddressHistoryResponse = {
+      transactions: allTransactions,
+      balance: parseFloat(apiData.balance)
+    };
+    
+    return result;
+  } catch (error) {
+    console.error('Error fetching transaction history:', error);
+    // Return empty history instead of throwing
+    return {
+      transactions: [],
+      balance: 0
+    };
+  }
+}
+
+export async function fetchTransactionDetails(hash: string): Promise<TransactionDetails> {
+  try {
+    const response = await makeAPIRequest(`/tx/${hash}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Failed to fetch transaction details:', response.status, errorText);
+      throw new Error(`Error ${response.status}`);
+    }
+    
+    const data = await safeJsonParse(response);
+    return data;
+  } catch (error) {
+    console.error('Error fetching transaction details:', error);
+    throw error;
+  }
+}
+
+// New function to fetch pending transactions from staging
+export async function fetchPendingTransactions(address: string): Promise<PendingTransaction[]> {
+  try {
+    const response = await makeAPIRequest(`/staging`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Failed to fetch pending transactions:', response.status, errorText);
+      return [];
+    }
+    
+    let data: StagingResponse;
+    try {
+      data = await safeJsonParse(response);
+      
+      if (!data.staged_transactions || !Array.isArray(data.staged_transactions)) {
+        console.warn('Staging response does not contain staged_transactions array:', data);
+        return [];
+      }
+    } catch (parseError) {
+      console.error('Failed to parse staging JSON:', parseError);
+      return [];
+    }
+    
+    // Filter transactions for the specific address
+    const userTransactions = data.staged_transactions.filter(tx => 
+      tx.from.toLowerCase() === address.toLowerCase() || 
+      tx.to.toLowerCase() === address.toLowerCase()
+    );
+    
+    return userTransactions;
+  } catch (error) {
+    console.error('Error fetching pending transactions:', error);
+    return [];
+  }
+}
+
+// New function to fetch specific pending transaction by hash
+export async function fetchPendingTransactionByHash(hash: string): Promise<PendingTransaction | null> {
+  try {
+    const response = await makeAPIRequest(`/staging`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Failed to fetch pending transactions:', response.status, errorText);
+      return null;
+    }
+    
+    let data: StagingResponse;
+    try {
+      data = await safeJsonParse(response);
+      
+      if (!data.staged_transactions || !Array.isArray(data.staged_transactions)) {
+        console.warn('Staging response does not contain staged_transactions array:', data);
+        return null;
+      }
+    } catch (parseError) {
+      console.error('Failed to parse staging JSON:', parseError);
+      return null;
+    }
+    
+    // Find transaction by hash
+    const transaction = data.staged_transactions.find(tx => tx.hash === hash);
+    return transaction || null;
+  } catch (error) {
+    console.error('Error fetching pending transaction by hash:', error);
+    return null;
+  }
+}
     ...options,
     headers
   });
@@ -62,10 +341,21 @@ export async function fetchBalance(address: string): Promise<BalanceResponse> {
     if (!balanceResponse.ok) {
       const errorText = await balanceResponse.text();
       console.error('Failed to fetch balance:', balanceResponse.status, errorText);
-      throw new Error(`Error ${balanceResponse.status}`);
+      return { balance: 0, nonce: 0 };
     }
     
-    const data: any = await balanceResponse.json();
+    let data: any;
+    try {
+      const responseText = await balanceResponse.text();
+      if (!responseText.trim()) {
+        console.error('Empty response from balance API');
+        return { balance: 0, nonce: 0 };
+      }
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse balance response as JSON:', parseError);
+      return { balance: 0, nonce: 0 };
+    }
 
     const balance = typeof data.balance === 'string' ? parseFloat(data.balance) : (data.balance || 0);
     
@@ -92,14 +382,14 @@ export async function fetchBalance(address: string): Promise<BalanceResponse> {
     }
 
     if (isNaN(balance) || isNaN(nonce)) {
-        console.warn('Invalid balance or nonce in API response', { balance, nonce });
-        return { balance: 0, nonce: 0 };
+      console.warn('Invalid balance or nonce in API response', { balance, nonce });
+      return { balance: 0, nonce: 0 };
     }
 
     return { balance, nonce };
   } catch (error) {
     console.error('Error fetching balance:', error);
-    throw error;
+    return { balance: 0, nonce: 0 };
   }
 }
 
@@ -112,10 +402,22 @@ export async function fetchEncryptedBalance(address: string, privateKey: string)
     });
     
     if (!response.ok) {
+      console.error('Failed to fetch encrypted balance:', response.status);
       return null;
     }
     
-    const data = await response.json();
+    let data: any;
+    try {
+      const responseText = await response.text();
+      if (!responseText.trim()) {
+        console.error('Empty response from encrypted balance API');
+        return null;
+      }
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse encrypted balance response as JSON:', parseError);
+      return null;
+    }
     
     return {
       public: parseFloat(data.public_balance?.split(' ')[0] || '0'),
@@ -292,9 +594,21 @@ export async function getPendingPrivateTransfers(address: string, privateKey: st
     });
     
     if (response.ok) {
-      const data = await response.json();
+      let data: any;
+      try {
+        const responseText = await response.text();
+        if (!responseText.trim()) {
+          console.error('Empty response from pending private transfers API');
+          return [];
+        }
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse pending private transfers response as JSON:', parseError);
+        return [];
+      }
       return data.pending_transfers || [];
     }
+    console.error('Failed to fetch pending private transfers:', response.status);
     return [];
   } catch (error) {
     console.error('Error fetching pending private transfers:', error);
