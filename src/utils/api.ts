@@ -26,12 +26,22 @@ async function makeAPIRequest(endpoint: string, options: RequestInit = {}): Prom
     Object.assign(headers, optionsHeaders);
   }
   
-  // Always use proxy - ensure endpoint starts with /
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  const url = `/api${cleanEndpoint}`;
+  // Determine if we're in development or production
+  const isDevelopment = import.meta.env.DEV;
   
-  // Add RPC URL header for dynamic proxy routing
-  headers['X-RPC-URL'] = provider.url;
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  
+  let url: string;
+  
+  if (isDevelopment) {
+    // Development: use Vite proxy
+    url = `/api${cleanEndpoint}`;
+    headers['X-RPC-URL'] = provider.url;
+  } else {
+    // Production: use nginx proxy with X-RPC-Target header
+    url = `/rpc-proxy${cleanEndpoint}`;
+    headers['X-RPC-Target'] = provider.url;
+  }
   
   console.log(`Making API request to: ${provider.url}${cleanEndpoint} (via proxy: ${url})`);
   
