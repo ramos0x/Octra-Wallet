@@ -155,6 +155,33 @@ export function WalletDashboard({
       setBalance(balanceData.balance);
       setNonce(balanceData.nonce);
       
+      // Fetch encrypted balance when RPC provider changes
+      try {
+        const { fetchEncryptedBalance } = await import('../utils/api');
+        const encData = await fetchEncryptedBalance(wallet.address, wallet.privateKey);
+        if (encData) {
+          setEncryptedBalance(encData);
+        } else {
+          // Reset encrypted balance to default values when fetch fails
+          setEncryptedBalance({
+            public: balanceData.balance,
+            public_raw: Math.floor(balanceData.balance * 1_000_000),
+            encrypted: 0,
+            encrypted_raw: 0,
+            total: balanceData.balance
+          });
+        }
+      } catch (encError) {
+        console.error('Failed to fetch encrypted balance during refresh:', encError);
+        setEncryptedBalance({
+          public: balanceData.balance,
+          public_raw: Math.floor(balanceData.balance * 1_000_000),
+          encrypted: 0,
+          encrypted_raw: 0,
+          total: balanceData.balance
+        });
+      }
+      
       // Fetch transaction history
       try {
         const historyData = await getTransactionHistory(wallet.address);
