@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Send, AlertTriangle, Wallet as WalletIcon, CheckCircle, ExternalLink, Copy, MessageSquare, Calculator } from 'lucide-react';
+import { Send, AlertTriangle, Wallet as WalletIcon, CheckCircle, ExternalLink, Copy, MessageSquare, Calculator, Globe, Loader2 } from 'lucide-react';
 import { Wallet } from '../types/wallet';
 import { fetchBalance, sendTransaction, createTransaction } from '../utils/api';
+import { validateRecipientInput, resolveRecipientAddress } from '../utils/ons';
 import { useToast } from '@/hooks/use-toast';
 
 interface SendTransactionProps {
@@ -23,17 +24,69 @@ interface SendTransactionProps {
 
 export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNonceUpdate, onTransactionSuccess }: SendTransactionProps) {
   const [recipientAddress, setRecipientAddress] = useState('');
+  const [resolvedAddress, setResolvedAddress] = useState<string | null>(null);
+  const [recipientType, setRecipientType] = useState<'address' | 'ons' | null>(null);
+  const [isResolving, setIsResolving] = useState(false);
+  const [resolutionError, setResolutionError] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [result, setResult] = useState<{ success: boolean; hash?: string; error?: string } | null>(null);
   const { toast } = useToast();
 
-  const validateAddress = (address: string) => {
-    // Octra address validation (starts with 'oct' and has specific format)
-    const octAddressRegex = /^oct[1-9A-HJ-NP-Za-km-z]{44}$/;
-    return octAddressRegex.test(address);
-  };
+  // Resolve recipient address when input changes
+  useEffect(() => {
+    const resolveRecipient = async () => {
+      if (!recipientAddress.trim()) {
+        setResolvedAddress(null);
+        setRecipientType(null);
+        setResolutionError(null);
+        return;
+      }
+
+      const validation = validateRecipientInput(recipientAddress);
+      if (!validation.isValid) {
+        setResolvedAddress(null);
+        setRecipientType(null);
+        setResolutionError(validation.error || 'Invalid input');
+        return;
+      }
+
+      if (validation.type === 'address') {
+        setResolvedAddress(recipientAddress.trim());
+        setRecipientType('address');
+        setResolutionError(null);
+        return;
+      }
+
+      if (validation.type === 'ons') {
+        setIsResolving(true);
+        setResolutionError(null);
+        
+        try {
+          const resolution = await resolveRecipientAddress(recipientAddress);
+          if (resolution.address) {
+            setResolvedAddress(resolution.address);
+            setRecipientType('ons');
+            setResolutionError(null);
+          } else {
+            setResolvedAddress(null);
+            setRecipientType('ons');
+            setResolutionError(resolution.error || 'Failed to resolve ONS domain');
+          }
+        } catch (error) {
+          setResolvedAddress(null);
+          setRecipientType('ons');
+          setResolutionError('Failed to resolve ONS domain');
+        } finally {
+          setIsResolving(false);
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(resolveRecipient, 500);
+    return () => clearTimeout(timeoutId);
+  }, [recipientAddress]);
 
   const validateAmount = (amountStr: string) => {
     const num = parseFloat(amountStr);
@@ -71,12 +124,12 @@ export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNon
       return;
     }
 
-    const finalRecipientAddress = recipientAddress;
+    const finalRecipientAddress = resolvedAddress;
     
-    if (!validateAddress(finalRecipientAddress)) {
+    if (!finalRecipientAddress) {
       toast({
         title: "Error",
-        description: "Invalid recipient address",
+        description: resolutionError || "Invalid recipient address",
         variant: "destructive",
       });
       return;
@@ -242,11 +295,47 @@ export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNon
           <Label htmlFor="recipient">Recipient Address</Label>
           <Input
             id="recipient"
-            placeholder="oct..."
+            placeholder="oct... or domain.oct"
             value={recipientAddress}
             onChange={(e) => setRecipientAddress(e.target.value)}
             className="font-mono"
           />
+          
+          {/* Recipient Status */}
+          {isResolving && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Resolving ONS domain...
+            </div>
+          )}
+          
+          {recipientType && !isResolving && (
+            <div className="space-y-2">
+              {recipientType === 'address' && (
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span className="text-sm text-green-600">Valid Octra address</span>
+                </div>
+              )}
+              
+              {recipientType === 'ons' && resolvedAddress && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-blue-500" />
+                    <span className="text-sm text-blue-600">ONS domain resolved</span>
+                  </div>
+                  <div className="p-2 bg-blue-50 dark:bg-blue-950/50 rounded text-sm">
+                    <span className="text-muted-foreground">Resolves to:</span>
+                    <div className="font-mono text-xs break-all mt-1">{resolvedAddress}</div>
+                  </div>
+                </div>
+              )}
+              
+              {resolutionError && (
+                <div className="text-sm text-red-600">{resolutionError}</div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Amount */}
@@ -374,7 +463,8 @@ export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNon
           onClick={handleSend}
           disabled={
             isSending || 
-            !validateAddress(recipientAddress) || 
+            !resolvedAddress || 
+            isResolving ||
             !validateAmount(amount) || 
             totalCost > currentBalance ||
             Boolean(message && message.length > 1024)
