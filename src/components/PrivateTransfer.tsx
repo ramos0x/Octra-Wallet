@@ -102,16 +102,15 @@ export function PrivateTransfer({ wallet, onTransactionSuccess }: PrivateTransfe
         return;
       }
 
+      // Check if trying to send to self first
+      if (resolvedAddress === wallet?.address) {
+        setRecipientInfo({ error: "Cannot send to yourself" });
+        return;
+      }
       setIsCheckingRecipient(true);
       try {
         const info = await getAddressInfo(resolvedAddress);
-        
-        // Check if trying to send to self
-        if (resolvedAddress === wallet?.address) {
-          setRecipientInfo({ error: "Cannot send to yourself" });
-        } else {
-          setRecipientInfo(info);
-        }
+        setRecipientInfo(info);
       } catch (error) {
         setRecipientInfo({ error: "Failed to check recipient" });
       } finally {
