@@ -337,7 +337,8 @@ export async function fetchBalance(address: string): Promise<BalanceResponse> {
     if (!balanceResponse.ok) {
       const errorText = await balanceResponse.text();
       console.error('Failed to fetch balance:', balanceResponse.status, errorText);
-      return { balance: 0, nonce: 0 };
+      // Return negative balance to indicate RPC failure
+      return { balance: -1, nonce: 0 };
     }
     
     let data: any;
@@ -345,12 +346,14 @@ export async function fetchBalance(address: string): Promise<BalanceResponse> {
       const responseText = await balanceResponse.text();
       if (!responseText.trim()) {
         console.error('Empty response from balance API');
-        return { balance: 0, nonce: 0 };
+        // Return negative balance to indicate RPC failure
+        return { balance: -1, nonce: 0 };
       }
       data = JSON.parse(responseText);
     } catch (parseError) {
       console.error('Failed to parse balance response as JSON:', parseError);
-      return { balance: 0, nonce: 0 };
+      // Return negative balance to indicate RPC failure
+      return { balance: -1, nonce: 0 };
     }
 
     const balance = typeof data.balance === 'string' ? parseFloat(data.balance) : (data.balance || 0);
@@ -379,13 +382,15 @@ export async function fetchBalance(address: string): Promise<BalanceResponse> {
 
     if (isNaN(balance) || isNaN(nonce)) {
       console.warn('Invalid balance or nonce in API response', { balance, nonce });
-      return { balance: 0, nonce: 0 };
+      // Return negative balance to indicate RPC failure
+      return { balance: -1, nonce: 0 };
     }
 
     return { balance, nonce };
   } catch (error) {
     console.error('Error fetching balance:', error);
-    return { balance: 0, nonce: 0 };
+    // Return negative balance to indicate RPC failure
+    return { balance: -1, nonce: 0 };
   }
 }
 

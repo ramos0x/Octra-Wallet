@@ -145,18 +145,31 @@ export function WalletDashboard({
     try {
       // Fetch balance and nonce
       const balanceData = await fetchBalance(wallet.address);
+      
+      // Check if RPC failed (negative balance indicates failure)
+      if (balanceData.balance < 0) {
+        throw new Error('RPC connection failed');
+      }
+      
       setBalance(balanceData.balance);
       setNonce(balanceData.nonce);
       
       // Fetch transaction history
-      const historyData = await getTransactionHistory(wallet.address);
-      
-      if (Array.isArray(historyData)) {
-        const transformedTxs = historyData.map((tx) => ({
-          ...tx,
-          type: tx.from?.toLowerCase() === wallet.address.toLowerCase() ? 'sent' : 'received'
-        } as Transaction));
-        setTransactions(transformedTxs);
+      try {
+        const historyData = await getTransactionHistory(wallet.address);
+        
+        if (Array.isArray(historyData)) {
+          const transformedTxs = historyData.map((tx) => ({
+            ...tx,
+            type: tx.from?.toLowerCase() === wallet.address.toLowerCase() ? 'sent' : 'received'
+          } as Transaction));
+          setTransactions(transformedTxs);
+        } else {
+          setTransactions([]);
+        }
+      } catch (historyError) {
+        console.error('Failed to fetch transaction history:', historyError);
+        setTransactions([]);
       }
       
       toast({
@@ -165,6 +178,12 @@ export function WalletDashboard({
       });
     } catch (error) {
       console.error('Failed to refresh wallet data:', error);
+      
+      // Reset all data when refresh fails
+      setBalance(0);
+      setNonce(0);
+      setTransactions([]);
+      
       toast({
         title: "Refresh Failed",
         description: "Failed to refresh data with new RPC provider",
