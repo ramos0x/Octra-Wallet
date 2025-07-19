@@ -222,13 +222,15 @@ export function DAppConnection({
             </div>
 
             <Alert>
-              <Shield className="h-4 w-4" />
-              <AlertDescription>
-                {existingConnection 
-                  ? 'Updating this connection will change which wallet this dApp can access.'
-                  : 'Only connect to websites you trust. This connection will allow the app to view your account information and request transactions.'
-                }
-              </AlertDescription>
+              <div className="flex items-start space-x-3">
+                <Shield className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <AlertDescription>
+                  {existingConnection 
+                    ? 'Updating this connection will change which wallet this dApp can access.'
+                    : 'Only connect to websites you trust. This connection will allow the app to view your account information and request transactions.'
+                  }
+                </AlertDescription>
+              </div>
             </Alert>
 
             {/* Action Buttons */}
