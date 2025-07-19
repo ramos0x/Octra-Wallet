@@ -14,83 +14,42 @@ async function makeAPIRequest(endpoint: string, options: RequestInit = {}): Prom
     throw new Error('No RPC provider available');
   }
   
+  // Merge headers
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'X-RPC-Target': provider.url,
+    ...provider.headers
+  };
+  
+  if (options.headers) {
+    const optionsHeaders = options.headers as Record<string, string>;
+    Object.assign(headers, optionsHeaders);
+  }
+  
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  
   // Check if we're in development mode
   const isDevelopment = import.meta.env.DEV;
   
   if (isDevelopment) {
     // Development: Use Vite proxy
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...provider.headers
-    };
-    
-    if (options.headers) {
-      const optionsHeaders = options.headers as Record<string, string>;
-      Object.assign(headers, optionsHeaders);
-    }
-    
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `/api${cleanEndpoint}`;
-    headers['X-RPC-URL'] = provider.url;
-    
-    console.log(`[DEV] Making API request to: ${provider.url}${cleanEndpoint} (via proxy: ${url})`);
+    console.log(`[DEV] Making API request via Vite proxy: ${url} -> ${provider.url}${cleanEndpoint}`);
     
     return fetch(url, {
       ...options,
       headers
     });
   } else {
-    // Production: Direct request to RPC provider
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'User-Agent': 'Octra-Web-Wallet/1.0',
-      'Accept': 'application/json',
-      ...provider.headers
-    };
-    
-    if (options.headers) {
-      const optionsHeaders = options.headers as Record<string, string>;
-      Object.assign(headers, optionsHeaders);
-    }
-    
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = `${provider.url}${cleanEndpoint}`;
-    
-    console.log(`[PROD] Making direct API request to: ${url}`);
+    // Production: Always use nginx proxy
+    const url = `/rpc-proxy${cleanEndpoint}`;
+    console.log(`[PROD] Making API request via nginx proxy: ${url} -> ${provider.url}${cleanEndpoint}`);
     
     return fetch(url, {
       ...options,
-      headers,
-      mode: 'cors'
+      headers
     });
   }
-}
-
-export async function fetchBalance(address: string): Promise<BalanceResponse> {
-  try {
-    // Fetch both balance and staging data like CLI does
-    const [balanceResponse, stagingResponse] = await Promise.all([
-      makeAPIRequest(`/balance/${address}`),
-      makeAPIRequest(`/staging`).catch(() => ({ ok: false }))
-    ]);
-    
-    if (!balanceResponse.ok) {
-      const errorText = await balanceResponse.text();
-      console.error('Failed to fetch balance:', balanceResponse.status, errorText);
-      throw new Error(`Error ${balanceResponse.status}`);
-    }
-    
-    const data: any = await balanceResponse.json();
-
-    const balance = typeof data.balance === 'string' ? parseFloat(data.balance) : (data.balance || 0);
-    
-    // Calculate nonce exactly like CLI: max of transaction_count and highest pending nonce
-    const transactionCount = data.nonce || 0;
-    let nonce = transactionCount;
-    
-    // Check staging for our pending transactions like CLI does
-    if ('ok' in stagingResponse && stagingResponse.ok) {
-      try {
         const stagingData = await (stagingResponse as Response).json();
         if (stagingData.staged_transactions) {
           const ourPendingTxs = stagingData.staged_transactions.filter(

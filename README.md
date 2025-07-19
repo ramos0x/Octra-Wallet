@@ -96,16 +96,26 @@ sudo crontab -e
 
 ### Dynamic RPC Configuration
 
-The application uses a smart fallback system for RPC requests:
+The application uses a dynamic proxy system for RPC requests:
 - **Development**: Uses Vite proxy for CORS handling
-- **Production**: 
-  1. First tries direct request to RPC provider
-  2. If CORS fails, automatically falls back to nginx proxy
-  3. Users can change RPC providers seamlessly through the UI
+- **Production**: Always uses nginx proxy with dynamic target based on selected RPC provider
+- **Dynamic Target**: RPC target ditentukan dari header `X-RPC-Target` yang dikirim oleh frontend
+- **Zero Configuration**: User bisa ganti RPC provider tanpa restart server
 
-This ensures maximum compatibility with any RPC provider, regardless of their CORS configuration.
+This ensures maximum compatibility with any RPC provider and eliminates CORS issues completely.
 
 ### Troubleshooting
 
-**RPC Connection Issues:**
-The application automatically handles CORS issues through the fallback proxy system. If you still encounter issues:
+**Debug RPC Requests:**
+```bash
+# Monitor nginx proxy logs
+sudo tail -f /var/log/nginx/rpc-proxy.log
+sudo tail -f /var/log/nginx/rpc-proxy-error.log
+```
+
+**Test RPC Connectivity:**
+```bash
+# Test manual request via proxy
+curl -H "X-RPC-Target: https://octra.network" \
+     https://your-domain.com/rpc-proxy/balance/octBK3u2ViE1Jr7wCtysgkcCHvuqt1C7Spiy6qYHPTqndPG
+```

@@ -32,27 +32,32 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://octra.network',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
         secure: true,
         configure: (proxy, options) => {
-          // Handle dynamic target based on localStorage
+          // Handle dynamic target based on X-RPC-Target header
           proxy.on('proxyReq', (proxyReq, req, res) => {
-            // Get RPC URL from request headers for dynamic routing
-            const rpcUrl = req.headers['x-rpc-url'];
-            if (rpcUrl && typeof rpcUrl === 'string') {
+            // Get RPC URL from X-RPC-Target header
+            const rpcTarget = req.headers['x-rpc-target'];
+            if (rpcTarget && typeof rpcTarget === 'string') {
               try {
-                const url = new URL(rpcUrl);
+                const url = new URL(rpcTarget);
                 
-                // Set the new target host
+                // Update proxy target dynamically
+                proxy.options.target = `${url.protocol}//${url.host}`;
                 proxyReq.setHeader('host', url.host);
                 
                 // Log the dynamic routing
                 console.log(`Proxying request to: ${url.protocol}//${url.host}${req.url}`);
               } catch (error) {
-                console.warn('Invalid RPC URL in header:', rpcUrl);
+                console.warn('Invalid RPC URL in header:', rpcTarget);
+                // Fallback to default
+                proxy.options.target = 'https://octra.network';
               }
+            } else {
+              // Default target if no header provided
+              proxy.options.target = 'https://octra.network';
             }
           });
         }
