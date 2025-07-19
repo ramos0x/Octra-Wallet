@@ -7,13 +7,18 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
-import { Users, Plus, Trash2, AlertTriangle, Wallet as WalletIcon, CheckCircle, ExternalLink, Copy, MessageSquare } from 'lucide-react';
+import { Users, Plus, Trash2, AlertTriangle, Wallet as WalletIcon, CheckCircle, ExternalLink, Copy, MessageSquare, Globe, Loader2 } from 'lucide-react';
 import { Wallet } from '../types/wallet';
 import { fetchBalance, sendTransaction, createTransaction } from '../utils/api';
+import { validateRecipientInput, resolveRecipientAddress } from '../utils/ons';
 import { useToast } from '@/hooks/use-toast';
 
 interface Recipient {
   address: string;
+  resolvedAddress?: string;
+  recipientType?: 'address' | 'ons';
+  isResolving?: boolean;
+  resolutionError?: string;
   amount: string;
   message: string;
 }
@@ -34,6 +39,81 @@ export function MultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonceUpda
   const [isSending, setIsSending] = useState(false);
   const [results, setResults] = useState<Array<{ success: boolean; hash?: string; error?: string; recipient: string; amount: string }>>([]);
   const { toast } = useToast();
+
+  // Resolve addresses when recipient addresses change
+  useEffect(() => {
+    const resolveAddresses = async () => {
+      const updatedRecipients = await Promise.all(
+        recipients.map(async (recipient, index) => {
+          if (!recipient.address.trim()) {
+            return {
+              ...recipient,
+              resolvedAddress: undefined,
+              recipientType: undefined,
+              isResolving: false,
+              resolutionError: undefined
+            };
+          }
+
+          const validation = validateRecipientInput(recipient.address);
+          if (!validation.isValid) {
+            return {
+              ...recipient,
+              resolvedAddress: undefined,
+              recipientType: undefined,
+              isResolving: false,
+              resolutionError: validation.error
+            };
+          }
+
+          if (validation.type === 'address') {
+            return {
+              ...recipient,
+              resolvedAddress: recipient.address.trim(),
+              recipientType: 'address' as const,
+              isResolving: false,
+              resolutionError: undefined
+            };
+          }
+
+          if (validation.type === 'ons') {
+            // Set resolving state
+            const resolvingRecipient = {
+              ...recipient,
+              isResolving: true,
+              resolutionError: undefined
+            };
+            
+            try {
+              const resolution = await resolveRecipientAddress(recipient.address);
+              return {
+                ...recipient,
+                resolvedAddress: resolution.address || undefined,
+                recipientType: 'ons' as const,
+                isResolving: false,
+                resolutionError: resolution.error
+              };
+            } catch (error) {
+              return {
+                ...recipient,
+                resolvedAddress: undefined,
+                recipientType: 'ons' as const,
+                isResolving: false,
+                resolutionError: 'Failed to resolve ONS domain'
+              };
+            }
+          }
+
+          return recipient;
+        })
+      );
+
+      setRecipients(updatedRecipients);
+    };
+
+    const timeoutId = setTimeout(resolveAddresses, 500);
+    return () => clearTimeout(timeoutId);
+  }, [recipients.map(r => r.address).join(',')]);
 
   const addRecipient = () => {
     setRecipients([...recipients, { address: '', amount: '', message: '' }]);
@@ -71,11 +151,16 @@ export function MultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonceUpda
 
   const validateRecipients = () => {
     for (const recipient of recipients) {
-      const finalAddress = recipient.address;
-      if (!finalAddress || !recipient.amount) {
+      if (!recipient.resolvedAddress || !recipient.amount) {
         return false;
       }
       if (isNaN(Number(recipient.amount)) || Number(recipient.amount) <= 0) {
+        return false;
+      }
+      if (recipient.isResolving) {
+        return false;
+      }
+      if (recipient.resolutionError) {
         return false;
       }
     }
@@ -170,7 +255,7 @@ export function MultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonceUpda
         // Prepare all transactions in the batch
         for (let i = 0; i < batch.length; i++) {
           const recipient = batch[i];
-          const finalRecipientAddress = recipient.address;
+          const finalRecipientAddress = recipient.resolvedAddress!;
           const txIndex = batchIdx * batchSize + i;
           const transactionNonce = currentNonce + 1 + txIndex;
 
@@ -356,11 +441,46 @@ export function MultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonceUpda
                     <Label htmlFor={`address-${index}`}>Address</Label>
                     <Input
                       id={`address-${index}`}
-                      placeholder="oct..."
+                      placeholder="oct... or domain.oct"
                       value={recipient.address}
                       onChange={(e) => updateRecipient(index, 'address', e.target.value)}
                       className="font-mono"
                     />
+                    
+                    {/* Address Resolution Status */}
+                    {recipient.isResolving && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Resolving...
+                      </div>
+                    )}
+                    
+                    {recipient.recipientType && !recipient.isResolving && (
+                      <div className="space-y-1">
+                        {recipient.recipientType === 'address' && (
+                          <div className="flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                            <span className="text-xs text-green-600">Valid address</span>
+                          </div>
+                        )}
+                        
+                        {recipient.recipientType === 'ons' && recipient.resolvedAddress && (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Globe className="h-4 w-4 text-blue-500" />
+                              <span className="text-xs text-blue-600">ONS resolved</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground font-mono break-all">
+                              → {recipient.resolvedAddress}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {recipient.resolutionError && (
+                          <div className="text-xs text-red-600">{recipient.resolutionError}</div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -512,7 +632,7 @@ export function MultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonceUpda
           <div className="space-y-1 text-xs sm:text-sm">
             <div className="flex justify-between items-center">
               <span>Total Recipients:</span>
-              <span>{recipients.filter(r => r.address && Number(r.amount) > 0).length}</span>
+              <span>{recipients.filter(r => r.resolvedAddress && Number(r.amount) > 0).length}</span>
             </div>
             <div className="flex justify-between items-center">
               <span>Total Amount:</span>
@@ -542,7 +662,7 @@ export function MultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonceUpda
             </div>
             <div className="flex justify-between items-center">
               <span>Next Nonce:</span>
-              <span className="font-mono">{nonce + recipients.filter(r => r.address && Number(r.amount) > 0).length}</span>
+              <span className="font-mono">{nonce + recipients.filter(r => r.resolvedAddress && Number(r.amount) > 0).length}</span>
             </div>
             {totalCost > currentBalance && (
               <div className="text-red-600 text-xs mt-2 break-words">
@@ -554,11 +674,11 @@ export function MultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonceUpda
 
         <Button 
           onClick={handleSendMultiple}
-          disabled={isSending || !validateRecipients() || totalCost > currentBalance || recipients.some(r => r.message && r.message.length > 1024)}
+          disabled={isSending || !validateRecipients() || totalCost > currentBalance || recipients.some(r => r.message && r.message.length > 1024) || recipients.some(r => r.isResolving)}
           className="w-full text-sm sm:text-base"
           size="lg"
         >
-          {isSending ? "Sending..." : `Send to ${recipients.filter(r => r.address && Number(r.amount) > 0).length} Recipients`}
+          {isSending ? "Sending..." : `Send to ${recipients.filter(r => r.resolvedAddress && Number(r.amount) > 0).length} Recipients`}
         </Button>
       </CardContent>
     </Card>
