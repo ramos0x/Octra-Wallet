@@ -337,7 +337,14 @@ export async function fetchBalance(address: string): Promise<BalanceResponse> {
     if (!balanceResponse.ok) {
       const errorText = await balanceResponse.text();
       console.error('Failed to fetch balance:', balanceResponse.status, errorText);
-      // Return negative balance to indicate RPC failure
+      
+      // Check if this is a 404 error (new address with no transactions)
+      if (balanceResponse.status === 404) {
+        console.log('Address not found (new address), returning zero balance');
+        return { balance: 0, nonce: 0 };
+      }
+      
+      // For other errors, return negative balance to indicate RPC failure
       return { balance: -1, nonce: 0 };
     }
     
@@ -346,14 +353,14 @@ export async function fetchBalance(address: string): Promise<BalanceResponse> {
       const responseText = await balanceResponse.text();
       if (!responseText.trim()) {
         console.error('Empty response from balance API');
-        // Return negative balance to indicate RPC failure
-        return { balance: -1, nonce: 0 };
+        // Return zero balance for empty response (could be new address)
+        return { balance: 0, nonce: 0 };
       }
       data = JSON.parse(responseText);
     } catch (parseError) {
       console.error('Failed to parse balance response as JSON:', parseError);
-      // Return negative balance to indicate RPC failure
-      return { balance: -1, nonce: 0 };
+      // Return zero balance for parse errors (could be new address)
+      return { balance: 0, nonce: 0 };
     }
 
     const balance = typeof data.balance === 'string' ? parseFloat(data.balance) : (data.balance || 0);
@@ -382,15 +389,15 @@ export async function fetchBalance(address: string): Promise<BalanceResponse> {
 
     if (isNaN(balance) || isNaN(nonce)) {
       console.warn('Invalid balance or nonce in API response', { balance, nonce });
-      // Return negative balance to indicate RPC failure
-      return { balance: -1, nonce: 0 };
+      // Return zero balance for invalid data (could be new address)
+      return { balance: 0, nonce: 0 };
     }
 
     return { balance, nonce };
   } catch (error) {
     console.error('Error fetching balance:', error);
-    // Return negative balance to indicate RPC failure
-    return { balance: -1, nonce: 0 };
+    // Return zero balance for network errors (could be new address)
+    return { balance: 0, nonce: 0 };
   }
 }
 

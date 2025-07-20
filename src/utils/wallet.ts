@@ -3,8 +3,19 @@ import { generateMnemonic, validateMnemonic, generateWalletFromMnemonic, bufferT
 import * as nacl from 'tweetnacl';
 
 export async function generateWallet(): Promise<Wallet> {
-  const mnemonic = generateMnemonic();
-  const walletData = await generateWalletFromMnemonic(mnemonic);
+  let walletData;
+  let attempts = 0;
+  const maxAttempts = 100; // Prevent infinite loop
+  
+  do {
+    const mnemonic = generateMnemonic();
+    walletData = await generateWalletFromMnemonic(mnemonic);
+    attempts++;
+    
+    if (attempts >= maxAttempts) {
+      throw new Error('Failed to generate wallet with 47-character address after maximum attempts');
+    }
+  } while (walletData.address.length !== 47);
   
   return {
     address: walletData.address,
@@ -17,26 +28,17 @@ export async function generateWallet(): Promise<Wallet> {
 export async function importWalletFromPrivateKey(privateKey: string): Promise<Wallet> {
   let cleanKey = privateKey.trim();
   
-  // Handle both hex and base64 formats
+  // Handle base64 format only
   let keyBuffer: Buffer;
   
-  if (cleanKey.startsWith('0x')) {
-    // Hex format
-    cleanKey = cleanKey.slice(2);
-    if (cleanKey.length !== 64) {
+  // Base64 format only
+  try {
+    keyBuffer = Buffer.from(cleanKey, 'base64');
+    if (keyBuffer.length !== 32) {
       throw new Error('Invalid private key length');
     }
-    keyBuffer = Buffer.from(cleanKey, 'hex');
-  } else {
-    // Assume base64 format
-    try {
-      keyBuffer = Buffer.from(cleanKey, 'base64');
-      if (keyBuffer.length !== 32) {
-        throw new Error('Invalid private key length');
-      }
-    } catch (error) {
-      throw new Error('Invalid private key format');
-    }
+  } catch (error) {
+    throw new Error('Invalid private key format');
   }
   
   // Verify the private key by creating a keypair

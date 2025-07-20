@@ -147,11 +147,6 @@ export function WalletDashboard({
       // Fetch balance and nonce
       const balanceData = await fetchBalance(wallet.address);
       
-      // Check if RPC failed (negative balance indicates failure)
-      if (balanceData.balance < 0) {
-        throw new Error('RPC connection failed');
-      }
-      
       setBalance(balanceData.balance);
       setNonce(balanceData.nonce);
       
@@ -205,18 +200,6 @@ export function WalletDashboard({
       });
     } catch (error) {
       console.error('Failed to refresh wallet data:', error);
-      
-      // Reset all data when refresh fails
-      setBalance(0);
-      setNonce(0);
-      setTransactions([]);
-      setEncryptedBalance({
-        public: 0,
-        public_raw: 0,
-        encrypted: 0,
-        encrypted_raw: 0,
-        total: 0
-      });
       
       toast({
         title: "Refresh Failed",

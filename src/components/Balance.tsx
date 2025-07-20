@@ -41,27 +41,7 @@ export function Balance({ wallet, balance, encryptedBalance: propEncryptedBalanc
     try {
       const balanceData = await fetchBalance(wallet.address);
       
-      // Check if RPC failed (negative balance indicates failure)
-      if (balanceData.balance < 0) {
-        // RPC failed, reset all balances to 0
-        onBalanceUpdate(0);
-        setEncryptedBalance({
-          public: 0,
-          public_raw: 0,
-          encrypted: 0,
-          encrypted_raw: 0,
-          total: 0
-        });
-        setPendingTransfers([]);
-        
-        toast({
-          title: "Error 500",
-          description: "Failed to refresh balance. Check RPC connection.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
+      // Handle balance response (0 is valid for new addresses)
       onBalanceUpdate(balanceData.balance);
       
       // Fetch encrypted balance
@@ -99,26 +79,13 @@ export function Balance({ wallet, balance, encryptedBalance: propEncryptedBalanc
         setPendingTransfers([]);
       }
       
-      if (balanceData.balance >= 0) {
-        toast({
-          title: "Balance Updated",
-          description: "Balance has been refreshed successfully",
-        });
-      }
-    } catch (error) {
-      // Reset all balances to 0 when RPC fails
-      onBalanceUpdate(0);
-      setEncryptedBalance({
-        public: 0,
-        public_raw: 0,
-        encrypted: 0,
-        encrypted_raw: 0,
-        total: 0
-      });
-      setPendingTransfers([]);
-      
       toast({
-        title: "Error 500",
+        title: "Balance Updated",
+        description: "Balance has been refreshed successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
         description: "Failed to refresh balance. Check RPC connection.",
         variant: "destructive",
       });
@@ -134,47 +101,34 @@ export function Balance({ wallet, balance, encryptedBalance: propEncryptedBalanc
       // Fetch balance first to check RPC connectivity
       fetchBalance(wallet.address)
         .then(balanceData => {
-          // Check if RPC failed (negative balance indicates failure)
-          if (balanceData.balance < 0) {
-            // RPC failed, reset everything to 0
-            setEncryptedBalance({
-              public: 0,
-              public_raw: 0,
-              encrypted: 0,
-              encrypted_raw: 0,
-              total: 0
+          // Fetch encrypted balance
+          return fetchEncryptedBalance(wallet.address, wallet.privateKey)
+            .then(encData => {
+              if (encData) {
+                setEncryptedBalance(encData);
+              } else {
+                setEncryptedBalance({
+                  public: balanceData.balance,
+                  public_raw: Math.floor(balanceData.balance * 1_000_000),
+                  encrypted: 0,
+                  encrypted_raw: 0,
+                  total: balanceData.balance
+                });
+              }
+            })
+            .then(() => {
+              // Fetch pending transfers
+              return getPendingPrivateTransfers(wallet.address, wallet.privateKey)
+                .then(setPendingTransfers)
+                .catch(error => {
+                  console.error('Failed to fetch pending transfers on mount:', error);
+                  setPendingTransfers([]);
+                });
             });
-            setPendingTransfers([]);
-          } else {
-            // RPC works, fetch encrypted balance
-            return fetchEncryptedBalance(wallet.address, wallet.privateKey)
-              .then(encData => {
-                if (encData) {
-                  setEncryptedBalance(encData);
-                } else {
-                  setEncryptedBalance({
-                    public: balanceData.balance,
-                    public_raw: Math.floor(balanceData.balance * 1_000_000),
-                    encrypted: 0,
-                    encrypted_raw: 0,
-                    total: balanceData.balance
-                  });
-                }
-              })
-              .then(() => {
-                // Fetch pending transfers
-                return getPendingPrivateTransfers(wallet.address, wallet.privateKey)
-                  .then(setPendingTransfers)
-                  .catch(error => {
-                    console.error('Failed to fetch pending transfers on mount:', error);
-                    setPendingTransfers([]);
-                  });
-              });
-          }
         })
         .catch(error => {
           console.error('Failed to fetch balance on mount:', error);
-          // Reset everything to 0 when RPC fails
+          // Set default values when fetch fails
           setEncryptedBalance({
             public: 0,
             public_raw: 0,

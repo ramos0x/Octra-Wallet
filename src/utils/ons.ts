@@ -21,7 +21,7 @@ export function isONSDomain(input: string): boolean {
 }
 
 export function isOctraAddress(input: string): boolean {
-  // Check if it's a valid Octra address: 47 characters starting with "oct"
+  // Check if it's a valid Octra address: exactly 47 characters starting with "oct"
   const addressRegex = /^oct[1-9A-HJ-NP-Za-km-z]{44}$/;
   return addressRegex.test(input);
 }
@@ -46,7 +46,7 @@ export function validateRecipientInput(input: string): { isValid: boolean; type:
   return { 
     isValid: false, 
     type: 'invalid', 
-    error: 'Must be a valid Octra address (47 chars starting with "oct") or ONS domain (ending with ".oct")'
+    error: 'Must be a valid Octra address (exactly 47 characters starting with "oct") or ONS domain (ending with ".oct")'
   };
 }
 
