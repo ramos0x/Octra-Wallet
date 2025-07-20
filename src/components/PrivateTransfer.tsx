@@ -356,7 +356,7 @@ export function PrivateTransfer({ wallet, onTransactionSuccess }: PrivateTransfe
               )}
               
               {resolutionError && (
-                <div className="text-sm text-red-600">{resolutionError}</div>
+                <div className="text-sm text-red-600 mt-1">{resolutionError}</div>
               )}
               
               {/* {recipientInfo && recipientInfo.error && (
@@ -376,6 +376,10 @@ export function PrivateTransfer({ wallet, onTransactionSuccess }: PrivateTransfe
                 </div>
               )}
             </div>
+          )}
+          
+          {recipientAddress.trim() && !recipientType && !isResolving && resolutionError && (
+            <div className="text-sm text-red-600 mt-1">{resolutionError}</div>
           )}
           
           {recipientInfo && !isCheckingRecipient && recipientInfo.error && (

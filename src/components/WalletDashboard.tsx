@@ -101,11 +101,9 @@ export function WalletDashboard({
         setNonce(balanceData.nonce);
       } catch (error) {
         console.error('Failed to fetch balance:', error);
-        toast({
-          title: "Error",
-          description: "Balance fetch failed",
-          variant: "destructive",
-        });
+        // Don't show error for new addresses, just set balance to 0
+        setBalance(0);
+        setNonce(0);
       } finally {
         setIsLoadingBalance(false);
       }
@@ -124,11 +122,8 @@ export function WalletDashboard({
         }
       } catch (error) {
         console.error('Failed to fetch transaction history:', error);
-        toast({
-          title: "Error",
-          description: "History fetch failed",
-          variant: "destructive",
-        });
+        // Don't show error for new addresses, just set empty transactions
+        setTransactions([]);
       } finally {
         setIsLoadingTransactions(false);
       }

@@ -477,9 +477,13 @@ export function MultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonceUpda
                         )}
                         
                         {recipient.resolutionError && (
-                          <div className="text-xs text-red-600">{recipient.resolutionError}</div>
+                          <div className="text-xs text-red-600 mt-1">{recipient.resolutionError}</div>
                         )}
                       </div>
+                    )}
+                    
+                    {recipient.address.trim() && !recipient.recipientType && !recipient.isResolving && recipient.resolutionError && (
+                      <div className="text-xs text-red-600 mt-1">{recipient.resolutionError}</div>
                     )}
                   </div>
 

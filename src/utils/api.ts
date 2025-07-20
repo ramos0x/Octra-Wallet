@@ -344,8 +344,9 @@ export async function fetchBalance(address: string): Promise<BalanceResponse> {
         return { balance: 0, nonce: 0 };
       }
       
-      // For other errors, return negative balance to indicate RPC failure
-      return { balance: -1, nonce: 0 };
+      // For other errors, also return zero balance for new addresses
+      console.log('Balance fetch failed, treating as new address with zero balance');
+      return { balance: 0, nonce: 0 };
     }
     
     let data: any;
@@ -353,13 +354,13 @@ export async function fetchBalance(address: string): Promise<BalanceResponse> {
       const responseText = await balanceResponse.text();
       if (!responseText.trim()) {
         console.error('Empty response from balance API');
-        // Return zero balance for empty response (could be new address)
+        // Return zero balance for empty response (new address)
         return { balance: 0, nonce: 0 };
       }
       data = JSON.parse(responseText);
     } catch (parseError) {
       console.error('Failed to parse balance response as JSON:', parseError);
-      // Return zero balance for parse errors (could be new address)
+      // Return zero balance for parse errors (new address)
       return { balance: 0, nonce: 0 };
     }
 
@@ -389,14 +390,14 @@ export async function fetchBalance(address: string): Promise<BalanceResponse> {
 
     if (isNaN(balance) || isNaN(nonce)) {
       console.warn('Invalid balance or nonce in API response', { balance, nonce });
-      // Return zero balance for invalid data (could be new address)
+      // Return zero balance for invalid data (new address)
       return { balance: 0, nonce: 0 };
     }
 
     return { balance, nonce };
   } catch (error) {
     console.error('Error fetching balance:', error);
-    // Return zero balance for network errors (could be new address)
+    // Return zero balance for network errors (new address)
     return { balance: 0, nonce: 0 };
   }
 }

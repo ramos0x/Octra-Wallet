@@ -332,9 +332,13 @@ export function SendTransaction({ wallet, balance, nonce, onBalanceUpdate, onNon
               )}
               
               {resolutionError && (
-                <div className="text-sm text-red-600">{resolutionError}</div>
+                <div className="text-sm text-red-600 mt-1">{resolutionError}</div>
               )}
             </div>
+          )}
+          
+          {recipientAddress.trim() && !recipientType && !isResolving && resolutionError && (
+            <div className="text-sm text-red-600 mt-1">{resolutionError}</div>
           )}
         </div>
 

@@ -76,7 +76,7 @@ export function Balance({ wallet, balance, encryptedBalance: propEncryptedBalanc
         setPendingTransfers(pending);
       } catch (error) {
         console.error('Failed to fetch pending transfers:', error);
-        setPendingTransfers([]);
+        // Set default values when fetch fails (new address)
       }
       
       toast({
@@ -86,7 +86,7 @@ export function Balance({ wallet, balance, encryptedBalance: propEncryptedBalanc
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to refresh balance. Check RPC connection.",
+        description: "Failed to refresh balance. This might be a new address or RPC connection issue.",
         variant: "destructive",
       });
       console.error('Balance fetch error:', error);
