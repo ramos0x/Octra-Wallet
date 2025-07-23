@@ -470,12 +470,15 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
               </>
             ) : (
               <>
-                <div>• Format: address,amount or domain.oct,amount</div>
+                <div>• Format: address,amount or address amount</div>
                 <div>• One entry per line</div>
+                <div>• Support .oct domain</div>
                 <div>• Example:</div>
                 <div className="font-mono bg-background p-2 rounded mt-1">
                   oct1234567890abcdef1234567890abcdef12345678,1.5<br/>
-                  bob.oct,0.5
+                  bob.oct,0.5<br>
+                  oct1234567890abcdef1234567890abcdef12345678 1.5</br>
+                  foo.oct 0.3
                 </div>
               </>
             )}
