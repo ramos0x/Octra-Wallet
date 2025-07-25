@@ -615,7 +615,7 @@ export function MultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonceUpda
           <div className="text-sm font-medium mb-2">Fee Calculation</div>
           <div className="space-y-2 text-xs sm:text-sm">
             <div className="text-muted-foreground">
-              Fee structure: 0.001 OCT for amounts &lt; 1000, 0.003 OCT for amounts ≥ 1000
+              Fee structure: 0.001 OCT for amounts under 1000, 0.003 OCT for amounts 1000 and above
             </div>
             {recipients.filter(r => r.address && Number(r.amount) > 0).map((recipient, index) => {
               const amount = Number(recipient.amount) || 0;

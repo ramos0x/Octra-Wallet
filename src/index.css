@@ -202,3 +202,17 @@
 .docs-card-description {
   @apply text-sm text-muted-foreground;
 }
+/* Input focus ring spacing fix */
+.relative input[type="password"],
+.relative input[type="text"],
+.relative input[type="email"] {
+  margin: 2px;
+  width: calc(100% - 4px);
+}
+
+/* Adjust button positioning in relative containers with inputs */
+.relative input + button {
+  right: 2px;
+  top: 2px;
+  height: calc(100% - 4px);
+}
