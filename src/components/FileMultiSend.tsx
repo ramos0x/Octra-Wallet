@@ -476,7 +476,7 @@ export function FileMultiSend({ wallet, balance, nonce, onBalanceUpdate, onNonce
                 <div>• Example:</div>
                 <div className="font-mono bg-background p-2 rounded mt-1">
                   oct1234567890abcdef1234567890abcdef12345678,1.5<br/>
-                  bob.oct,0.5<br>
+                  bob.oct,0.5<br/>
                   oct1234567890abcdef1234567890abcdef12345678 1.5<br/>
                   foo.oct 0.3
                 </div>
