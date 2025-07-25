@@ -374,18 +374,18 @@ export function WalletDashboard({
   return (
     <div className="min-h-screen">
       {/* Header */}
-      <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+      <header className="octra-header sticky top-0 z-50">
+        <div className="octra-container">
+          <div className="flex items-center justify-between py-4">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
                 <Avatar className="h-10 w-10">
-                  <AvatarFallback className="bg-primary text-primary-foreground">
+                  <AvatarFallback className="bg-primary/10 text-primary border border-primary/20">
                     <WalletIcon className="h-5 w-5" />
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h1 className="text-xl font-bold">Octra Wallet</h1>
+                  <h1 className="text-xl font-semibold text-foreground">octra wallet</h1>
                   <div className="flex items-center space-x-2">
                     {/* Wallet Selector */}
                     <DropdownMenu>
@@ -753,7 +753,7 @@ export function WalletDashboard({
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
+      <main className="octra-container py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview" className="flex items-center gap-2">

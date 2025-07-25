@@ -356,7 +356,7 @@ function App() {
   if (isLocked) {
     return (
       <ThemeProvider defaultTheme="dark" storageKey="octra-wallet-theme">
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+        <div className="min-h-screen bg-background">
           <UnlockWallet onUnlock={handleUnlock} />
           <Toaster />
         </div>
@@ -368,7 +368,7 @@ function App() {
   if (transactionRequest && wallets.length > 0) {
     return (
       <ThemeProvider defaultTheme="dark" storageKey="octra-wallet-theme">
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+        <div className="min-h-screen bg-background">
           <TransactionRequestDialog
             transactionRequest={transactionRequest}
             wallets={wallets}
@@ -388,7 +388,7 @@ function App() {
   if (connectionRequest && wallets.length > 0) {
     return (
       <ThemeProvider defaultTheme="dark" storageKey="octra-wallet-theme">
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+        <div className="min-h-screen bg-background">
           <DAppConnection
             connectionRequest={connectionRequest}
             wallets={wallets}
@@ -405,7 +405,7 @@ function App() {
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="octra-wallet-theme">
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      <div className="min-h-screen bg-background">
         {!wallet ? (
           <WelcomeScreen onWalletCreated={addWallet} />
         ) : (

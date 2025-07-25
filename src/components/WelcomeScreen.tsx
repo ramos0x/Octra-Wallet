@@ -51,24 +51,25 @@ export function WelcomeScreen({ onWalletCreated }: WelcomeScreenProps) {
       </div>
     );
   }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-4xl">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <div className="p-3 bg-primary rounded-full">
-              <WalletIcon className="h-8 w-8 text-primary-foreground" />
+        <div className="text-center mb-8 octra-fade-in">
+          <div className="flex items-center justify-center mb-6">
+            <div className="p-4 bg-primary/10 rounded-full border border-primary/20">
+              <WalletIcon className="h-10 w-10 text-primary" />
             </div>
           </div>
-          <h1 className="text-4xl font-bold mb-2">Welcome to Octra Wallet</h1>
-          <p className="text-xl text-muted-foreground mb-6">
-            Your secure gateway to the Octra blockchain
+          <h1 className="text-4xl font-bold mb-3 text-foreground">Octra Wallet</h1>
+          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+            Your secure gateway to the Octra blockchain network
           </p>
           {hasExistingWallets() && (
-            <Alert className="max-w-md mx-auto mb-6">
-              <Info className="h-4 w-4" />
-              <AlertDescription>
+            <Alert className="max-w-md mx-auto mb-6 border-primary/20 bg-primary/5">
+              <Info className="h-4 w-4 text-primary" />
+              <AlertDescription className="text-muted-foreground">
                 You have existing wallets. Creating or importing a new wallet will add it to your collection.
               </AlertDescription>
             </Alert>
@@ -76,12 +77,12 @@ export function WelcomeScreen({ onWalletCreated }: WelcomeScreenProps) {
         </div>
 
         {/* Main Card */}
-        <Card className="shadow-2xl border-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
-          <CardHeader className="text-center pb-4">
-            <CardTitle className="text-2xl">
+        <Card className="shadow-sm border-border/40 bg-card/50 backdrop-blur-sm octra-fade-in">
+          <CardHeader className="text-center pb-6">
+            <CardTitle className="text-2xl font-semibold text-foreground">
               {hasExistingWallets() ? 'Add Another Wallet' : 'Get Started'}
             </CardTitle>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mt-2">
               {hasExistingWallets() 
                 ? 'Create a new wallet or import an existing one to add to your collection'
                 : 'Create a new wallet or import an existing one to begin'
@@ -90,20 +91,20 @@ export function WelcomeScreen({ onWalletCreated }: WelcomeScreenProps) {
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="generate" className="flex items-center gap-2">
+              <TabsList className="grid w-full grid-cols-2 mb-8 bg-muted/50">
+                <TabsTrigger value="generate" className="flex items-center gap-2 data-[state=active]:bg-background">
                   <Plus className="h-4 w-4" />
                   Create New Wallet
                 </TabsTrigger>
-                <TabsTrigger value="import" className="flex items-center gap-2">
+                <TabsTrigger value="import" className="flex items-center gap-2 data-[state=active]:bg-background">
                   <Download className="h-4 w-4" />
                   Import Wallet
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="generate" className="space-y-4">
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold mb-2">Create New Wallet</h3>
+                <div className="text-center mb-6">
+                  <h3 className="text-lg font-semibold mb-2 text-foreground">Create New Wallet</h3>
                   <p className="text-sm text-muted-foreground">
                     Generate a brand new wallet with a secure mnemonic phrase
                   </p>
@@ -112,8 +113,8 @@ export function WelcomeScreen({ onWalletCreated }: WelcomeScreenProps) {
               </TabsContent>
 
               <TabsContent value="import" className="space-y-4">
-                <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold mb-2">Import Existing Wallet</h3>
+                <div className="text-center mb-6">
+                  <h3 className="text-lg font-semibold mb-2 text-foreground">Import Existing Wallet</h3>
                   <p className="text-sm text-muted-foreground">
                     Restore your wallet using a private key or mnemonic phrase
                   </p>
@@ -125,11 +126,11 @@ export function WelcomeScreen({ onWalletCreated }: WelcomeScreenProps) {
         </Card>
 
         {/* Footer */}
-        <div className="text-center mt-8 text-sm text-muted-foreground">
+        <div className="text-center mt-8 text-sm text-muted-foreground space-y-2">
           <p>
             By using Octra Wallet, you agree to our terms of service and privacy policy.
           </p>
-          <p className="mt-2">
+          <p>
             Always keep your private keys and mnemonic phrase secure and never share them with anyone.
           </p>
         </div>

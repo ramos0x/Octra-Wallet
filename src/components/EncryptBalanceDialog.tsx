@@ -28,7 +28,7 @@ export function EncryptBalanceDialog({
   const [isEncrypting, setIsEncrypting] = useState(false);
   const { toast } = useToast();
 
-  const maxEncryptable = Math.max(0, publicBalance - 0.01); // Reserve 0.01 OCT for fees
+  const maxEncryptable = Math.max(0, publicBalance - 0.5); // Reserve 0.5 OCT for fees
 
   const handleEncrypt = async () => {
     const amountNum = parseFloat(amount);
