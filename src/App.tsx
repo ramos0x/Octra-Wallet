@@ -335,7 +335,7 @@ function App() {
     // If removing active wallet, switch to another or clear
     if (wallet?.address === walletToRemove.address) {
       if (updatedWallets.length > 0) {
-        const newActiveWallet = updatedWallets[0];
+        const newActiveWallet = updatedWallets[0]; // Switch to default/first wallet
         setWallet(newActiveWallet);
         localStorage.setItem('activeWalletId', newActiveWallet.address);
       } else {

@@ -265,6 +265,14 @@ export function WalletDashboard({
     // Remove from regular wallets storage
     onRemoveWallet(walletToDelete);
     
+    // If we removed the active wallet, switch to the first remaining wallet
+    if (walletToDelete.address === wallet.address) {
+      const remainingWallets = wallets.filter(w => w.address !== walletToDelete.address);
+      if (remainingWallets.length > 0) {
+        onSwitchWallet(remainingWallets[0]); // Switch to first/default wallet
+      }
+    }
+    
     // Also remove from encrypted wallets storage
     const encryptedWallets = JSON.parse(localStorage.getItem('encryptedWallets') || '[]');
     const updatedEncryptedWallets = encryptedWallets.filter(
@@ -404,7 +412,7 @@ export function WalletDashboard({
                           Select Wallet ( {wallets.length} )
                         </div>
                         <DropdownMenuSeparator />
-                        <div className="max-h-[50vh] overflow-y-auto p-1">
+                        <ScrollArea className="h-[25vh] max-h-[40vh] p-1 pr-3 mr-1">
                           {wallets.map((w, i) => (
                             <div
                               key={w.address}
@@ -474,7 +482,7 @@ export function WalletDashboard({
                               </div>
                             </div>
                           ))}
-                        </div>
+                        </ScrollArea>
                         <DropdownMenuSeparator />
                         <div
                           onClick={() => setShowAddWalletDialog(true)}
