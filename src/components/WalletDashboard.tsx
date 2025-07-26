@@ -262,19 +262,29 @@ export function WalletDashboard({
       return;
     }
     
-    // Calculate remaining wallets first
+    // Calculate remaining wallets after removal
     const remainingWallets = wallets.filter(w => w.address !== walletToDelete.address);
     
-    // If we're removing the active wallet, switch to another wallet first
-    if (walletToDelete.address === wallet.address) {
-      if (remainingWallets.length > 0) {
-        // Switch to the first remaining wallet
-        onSwitchWallet(remainingWallets[0]);
-      }
+    // If we're removing the active wallet, we need to switch to another wallet first
+    if (walletToDelete.address === wallet.address && remainingWallets.length > 0) {
+      // Find the best replacement wallet (first in the list)
+      const newActiveWallet = remainingWallets[0];
+      
+      // Update localStorage immediately with new active wallet
+      localStorage.setItem('activeWalletId', newActiveWallet.address);
+      localStorage.setItem('wallets', JSON.stringify(remainingWallets));
+      
+      // Switch to the new wallet first
+      onSwitchWallet(newActiveWallet);
+      
+      // Small delay to ensure state is updated before removing
+      setTimeout(() => {
+        onRemoveWallet(walletToDelete);
+      }, 100);
+    } else {
+      // If we're not removing the active wallet, just remove it normally
+      onRemoveWallet(walletToDelete);
     }
-    
-    // Now remove the wallet from storage
-    onRemoveWallet(walletToDelete);
     
     // Also remove from encrypted wallets storage
     const encryptedWallets = JSON.parse(localStorage.getItem('encryptedWallets') || '[]');
@@ -283,12 +293,14 @@ export function WalletDashboard({
     );
     localStorage.setItem('encryptedWallets', JSON.stringify(updatedEncryptedWallets));
     
-    toast({
-      title: "Wallet Removed",
-      description: "Wallet has been removed successfully",
-    });
-    
-    setWalletToDelete(null);
+    // Show success message and clear the deletion state
+    setTimeout(() => {
+      toast({
+        title: "Wallet Removed",
+        description: "Wallet has been removed successfully",
+      });
+      setWalletToDelete(null);
+    }, 150);
   };
 
   const handleImportSuccess = (newWallet: Wallet) => {
@@ -451,36 +463,18 @@ export function WalletDashboard({
                                   <Copy className="h-3 w-3" />
                                 </Button>
                                 {wallets.length > 1 && (
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setWalletToDelete(w);
-                                        }}
-                                        className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-                                        title="Remove wallet"
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Remove Wallet</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Are you sure you want to remove wallet <span className="font-mono">{truncateAddress(w.address)}</span>? This action cannot be undone.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel onClick={() => setWalletToDelete(null)}>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleRemoveWallet} className="bg-red-600 hover:bg-red-700">
-                                          Remove
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setWalletToDelete(w);
+                                    }}
+                                    className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                    title="Remove wallet"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
                                 )}
                               </div>
                             </div>
@@ -682,6 +676,39 @@ export function WalletDashboard({
               </div>
 
               {/* Dialogs - Keep outside of mobile menu for proper functionality */}
+              {/* Wallet Removal Confirmation Dialog */}
+              <AlertDialog open={!!walletToDelete} onOpenChange={(open) => !open && setWalletToDelete(null)}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Remove Wallet</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to remove wallet{' '}
+                      <span className="font-mono">
+                        {walletToDelete ? truncateAddress(walletToDelete.address) : ''}
+                      </span>
+                      ? This action cannot be undone.
+                      {walletToDelete?.address === wallet.address && (
+                        <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-950/50 rounded text-sm">
+                          <strong>Note:</strong> This is your currently active wallet. 
+                          The first remaining wallet will become active.
+                        </div>
+                      )}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setWalletToDelete(null)}>
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleRemoveWallet} 
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Remove Wallet
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              
               <Dialog open={showAddWalletDialog} onOpenChange={setShowAddWalletDialog}>
                 <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden">
                   <DialogHeader>
