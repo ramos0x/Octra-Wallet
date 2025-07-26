@@ -262,16 +262,19 @@ export function WalletDashboard({
       return;
     }
     
-    // Remove from regular wallets storage
-    onRemoveWallet(walletToDelete);
+    // Calculate remaining wallets first
+    const remainingWallets = wallets.filter(w => w.address !== walletToDelete.address);
     
-    // If we removed the active wallet, switch to the first remaining wallet
+    // If we're removing the active wallet, switch to another wallet first
     if (walletToDelete.address === wallet.address) {
-      const remainingWallets = wallets.filter(w => w.address !== walletToDelete.address);
       if (remainingWallets.length > 0) {
-        onSwitchWallet(remainingWallets[0]); // Switch to first/default wallet
+        // Switch to the first remaining wallet
+        onSwitchWallet(remainingWallets[0]);
       }
     }
+    
+    // Now remove the wallet from storage
+    onRemoveWallet(walletToDelete);
     
     // Also remove from encrypted wallets storage
     const encryptedWallets = JSON.parse(localStorage.getItem('encryptedWallets') || '[]');
